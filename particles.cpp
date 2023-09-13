@@ -276,6 +276,7 @@ public:
   // Neighbors related
   void reset_neighbors() { this->neighbors.clear(); }
   void add_neighbor(Particle *neighbor) { this->neighbors.push_back(neighbor); }
+
   std::vector<int> neighbor_ids() {
     std::vector<int> ids = {};
     for (auto neighbor : this->neighbors) {
@@ -283,6 +284,7 @@ public:
     }
     return ids;
   }
+
   void remove_self_from_neighbors_list() {
     int index = -1;
     for (auto neighbor : this->neighbors) {
@@ -438,6 +440,11 @@ public:
 
   Cell *get_cell(int index) { return this->cells[index]; }
 
+  void reset_cells() {
+    for (auto cell : this->cells)
+      cell->reset();
+  }
+
   void add_particles(std::vector<Particle *> particles) {
     int cell_index;
     for (auto particle : particles) {
@@ -455,6 +462,7 @@ public:
 
   void generate_cell_neighbors_lists() {
     for (auto &cell : this->cells) {
+      cell->reset();
       cell->generate_neighbor_indices(this->num_rows, this->num_cols, this->M,
                                       this->wrap_x, this->wrap_y);
       for (auto cell_index : cell->get_indices_of_neighbor_cells()) {
@@ -465,14 +473,15 @@ public:
 
   std::vector<Particle *> get_particles_from_neighboring_cells(int index) {
     std::vector<Particle *> neighbors = {};
-    for (auto cell : this->cells[index]->get_neighboring_cells())
-      for (auto particle : cell->get_particles())
+    for (auto cell : this->cells[index]->get_neighboring_cells()) {
+      for (auto particle : cell->get_particles()) {
         neighbors.push_back(particle);
+      }
+    }
     return neighbors;
   }
 
   void generate_particle_neighbors_list(Particle *particle) {
-    particle->reset_neighbors();
     std::vector<Particle *> neighbors =
         this->get_particles_from_neighboring_cells(particle->get_cell_index());
     for (auto neighbor : neighbors) {
@@ -581,7 +590,6 @@ int main(int argc, char *argv[]) {
   Grid grid(approx_sqrt_num_particles, approx_sqrt_num_particles, width, height,
             1, 0, 0);
   grid.generate_cell_neighbors_lists();
-
   std::vector<vec2> points = grid.lattice_points();
 
   // init particles
@@ -590,7 +598,7 @@ int main(int argc, char *argv[]) {
   std::vector<Particle *> particles;
   for (int i = 0; i < num_particles; i++) {
     vec2 vel = glm::circularRand(1.0E0);
-    particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0E-1));
+    particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0E0));
   }
 
   // Progress bar
@@ -614,14 +622,20 @@ int main(int argc, char *argv[]) {
     // Generate neighbor lists
     for (auto &p : particles) {
       p->set_cell_index(grid.get_index_from_pos(p->get_pos()));
+      p->reset_neighbors();
     }
+    grid.reset_cells();
+    grid.add_particles(particles);
     grid.generate_all_particles_neighbor_lists(particles);
+    // for (auto particle : particles[0]->get_neighbors_list())
+    //   std::cerr << particle->get_id() << " ";
+    // std::cerr << std::endl;
 
     // Interaction
-    for (auto &p1 : particles) {
+    for (auto &p1 : particles)
       for (auto p2 : p1->get_neighbors_list())
-        p1->interact(*p2);
-    }
+        if (p1->get_id() != p2->get_id())
+          p1->interact(*p2);
 
     // Velocity Verlet integration
     for (auto &p : particles) {
@@ -646,9 +660,9 @@ int main(int argc, char *argv[]) {
              std::to_string(num_steps);
     bar.set_option(indicators::option::PostfixText{pgtext});
 
-    // test
-    if (particles[0]->neighbor_ids().size())
-      std::cerr << particles[0]->get_id() << std::endl;
+    // // test
+    // if (particles[0]->neighbor_ids().size())
+    //   std::cerr << particles[0]->get_id() << std::endl;
   }
 
   // Save data
