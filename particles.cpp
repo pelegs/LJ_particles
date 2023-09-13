@@ -560,11 +560,14 @@ void append_new_data(const std::vector<Particle *> particles,
 
 void save_data(const std::string &filename, const std::vector<double> box_size,
                const std::vector<unsigned long> num_particles,
-               unsigned long num_steps, const std::vector<double> data) {
+               unsigned long num_steps, const std::vector<double> trajectories,
+               const std::vector<int> neighbors_matrix) {
   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
   cnpy::npz_save(filename, "num_particles", &num_particles[0], {1}, "a");
-  cnpy::npz_save(filename, "trajectories", &data[0],
+  cnpy::npz_save(filename, "trajectories", &trajectories[0],
                  {num_steps, num_particles[0], 2}, "a");
+  cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
+                 {num_steps, num_particles[0], num_particles[0]}, "a");
   // in each frame i: data[i, :, :].T <-- note the transpose!
 }
 
@@ -591,6 +594,8 @@ int main(int argc, char *argv[]) {
             1, 0, 0);
   grid.generate_cell_neighbors_lists();
   std::vector<vec2> points = grid.lattice_points();
+  std::vector<int> neighbors_matrix = {};
+  std::vector<int> nmat_row(num_particles, 0);
 
   // init particles
   double x, y;
@@ -627,9 +632,16 @@ int main(int argc, char *argv[]) {
     grid.reset_cells();
     grid.add_particles(particles);
     grid.generate_all_particles_neighbor_lists(particles);
-    // for (auto particle : particles[0]->get_neighbors_list())
-    //   std::cerr << particle->get_id() << " ";
-    // std::cerr << std::endl;
+
+    // Test neighbors
+    for (auto p : particles) {
+      nmat_row = std::vector<int>(num_particles, 0);
+      for (auto neighbor : p->get_neighbors_list()) {
+        nmat_row[neighbor->get_id()] = 1;
+      }
+      neighbors_matrix.insert(neighbors_matrix.end(), nmat_row.begin(),
+                              nmat_row.end());
+    }
 
     // Interaction
     for (auto &p1 : particles)
@@ -659,17 +671,14 @@ int main(int argc, char *argv[]) {
     pgtext = "Simulation running: " + std::to_string(step) + "/" +
              std::to_string(num_steps);
     bar.set_option(indicators::option::PostfixText{pgtext});
-
-    // // test
-    // if (particles[0]->neighbor_ids().size())
-    //   std::cerr << particles[0]->get_id() << std::endl;
   }
 
   // Save data
   std::vector<double> box_size = {width, height};
   std::vector<unsigned long> num_particles_vec = {
       static_cast<unsigned long>(num_particles)};
-  save_data(filename, box_size, num_particles_vec, num_steps, data);
+  save_data(filename, box_size, num_particles_vec, num_steps, data,
+            neighbors_matrix);
 
   return 0;
 }
