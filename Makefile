@@ -5,3 +5,6 @@ NAME=particles
 
 all:
 	$(COMPILER) $(NAME).cpp -o $(NAME) $(LDFLAGS) --std=$(STD)
+
+debug:
+	$(COMPILER) $(NAME).cpp -o $(NAME) $(LDFLAGS) --std=$(STD) -g

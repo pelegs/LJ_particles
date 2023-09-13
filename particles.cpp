@@ -227,10 +227,12 @@ public:
 
   // Checking for borders
   void check_wall_collision(const double &width, const double &height) {
-    if (pos[X] < this->rad || std::abs(pos[X] - this->rad) > width)
+    if (pos[X] < this->rad || std::abs(pos[X] - this->rad) > width) {
       this->vel[X] *= -1;
-    if (pos[Y] < this->rad || std::abs(pos[Y] - this->rad) > height)
+    }
+    if (pos[Y] < this->rad || std::abs(pos[Y] - this->rad) > height) {
       this->vel[Y] *= -1;
+    }
   }
 
   // Force-related stuff
@@ -426,7 +428,7 @@ public:
     int cell_index, row_index, col_index;
     if (pos[0] < 0.0 || pos[1] < 0.0 || pos[0] >= this->width ||
         pos[1] >= this->height) {
-      return -1;
+      return 0;
     }
     row_index = (int)std::floor((pos[Y] / this->height) * (this->num_rows));
     col_index = (int)std::floor((pos[X] / this->width) * (this->num_cols));
@@ -564,10 +566,10 @@ void save_data(const std::string &filename, const std::vector<double> box_size,
                const std::vector<int> neighbors_matrix) {
   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
   cnpy::npz_save(filename, "num_particles", &num_particles[0], {1}, "a");
-  cnpy::npz_save(filename, "trajectories", &trajectories[0],
-                 {num_steps, num_particles[0], 2}, "a");
   cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
                  {num_steps, num_particles[0], num_particles[0]}, "a");
+  cnpy::npz_save(filename, "trajectories", &trajectories[0],
+                 {num_steps, num_particles[0], 2}, "a");
   // in each frame i: data[i, :, :].T <-- note the transpose!
 }
 
@@ -602,8 +604,8 @@ int main(int argc, char *argv[]) {
   int index1D;
   std::vector<Particle *> particles;
   for (int i = 0; i < num_particles; i++) {
-    vec2 vel = glm::circularRand(1.0E0);
-    particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0E0));
+    vec2 vel = glm::circularRand(1.0E1);
+    particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0));
   }
 
   // Progress bar
@@ -621,9 +623,10 @@ int main(int argc, char *argv[]) {
           std::vector<indicators::FontStyle>{indicators::FontStyle::bold}}};
 
   // Simulation
-  std::vector<double> data = {};
+  std::vector<double> trajectories = {};
   double time = 0.0;
   for (int step = 0; step < num_steps; step++) {
+
     // Generate neighbor lists
     for (auto &p : particles) {
       p->set_cell_index(grid.get_index_from_pos(p->get_pos()));
@@ -644,10 +647,10 @@ int main(int argc, char *argv[]) {
     }
 
     // Interaction
-    for (auto &p1 : particles)
-      for (auto p2 : p1->get_neighbors_list())
-        if (p1->get_id() != p2->get_id())
-          p1->interact(*p2);
+    // for (auto &p1 : particles)
+    //   for (auto p2 : p1->get_neighbors_list())
+    //     if (p1->get_id() != p2->get_id())
+    //       p1->interact(*p2);
 
     // Velocity Verlet integration
     for (auto &p : particles) {
@@ -662,7 +665,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Data related
-    append_new_data(particles, data);
+    append_new_data(particles, trajectories);
     time += dt;
 
     // Progress bar update
@@ -677,7 +680,7 @@ int main(int argc, char *argv[]) {
   std::vector<double> box_size = {width, height};
   std::vector<unsigned long> num_particles_vec = {
       static_cast<unsigned long>(num_particles)};
-  save_data(filename, box_size, num_particles_vec, num_steps, data,
+  save_data(filename, box_size, num_particles_vec, num_steps, trajectories,
             neighbors_matrix);
 
   return 0;
