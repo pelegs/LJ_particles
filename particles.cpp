@@ -465,16 +465,13 @@ public:
 
   std::vector<Particle *> get_particles_from_neighboring_cells(int index) {
     std::vector<Particle *> neighbors = {};
-    std::vector<int> neighbor_cell_1D_indices =
-        get_neighboring_indices(index, this->num_rows, this->num_cols, this->M,
-                                this->wrap_x, this->wrap_y);
-    for (auto idx : neighbor_cell_1D_indices)
-      for (auto particle : this->cells[idx]->get_particles())
+    for (auto cell : this->cells[index]->get_neighboring_cells())
+      for (auto particle : cell->get_particles())
         neighbors.push_back(particle);
     return neighbors;
   }
 
-  void generate_neighbor_list(Particle *particle) {
+  void generate_particle_neighbors_list(Particle *particle) {
     particle->reset_neighbors();
     std::vector<Particle *> neighbors =
         this->get_particles_from_neighboring_cells(particle->get_cell_index());
@@ -484,9 +481,10 @@ public:
     }
   }
 
-  void generate_all_neighbor_lists(std::vector<Particle *> particles) {
+  void
+  generate_all_particles_neighbor_lists(std::vector<Particle *> particles) {
     for (auto &particle : particles)
-      this->generate_neighbor_list(particle);
+      this->generate_particle_neighbors_list(particle);
   }
 
   std::vector<vec2> lattice_points() {
@@ -584,81 +582,80 @@ int main(int argc, char *argv[]) {
             1, 0, 0);
   grid.generate_cell_neighbors_lists();
 
-  // std::vector<vec2> points = grid.lattice_points();
-  //
-  //
-  // // init particles
-  // double x, y;
-  // int index1D;
-  // std::vector<Particle *> particles;
-  // for (int i = 0; i < num_particles; i++) {
-  //   vec2 vel = glm::circularRand(1.0E0);
-  //   particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0E-1));
-  // }
-  //
-  // // Progress bar
-  // int progress_perc = 0;
-  // std::string pgtext = "Simulation running: 0/" +
-  // std::to_string(num_particles); indicators::ProgressBar bar{
-  //     indicators::option::BarWidth{100},
-  //     indicators::option::Start{"["},
-  //     indicators::option::Fill{"■"},
-  //     indicators::option::Lead{"■"},
-  //     indicators::option::Remainder{"-"},
-  //     indicators::option::End{" ]"},
-  //     indicators::option::PostfixText{pgtext},
-  //     indicators::option::FontStyles{
-  //         std::vector<indicators::FontStyle>{indicators::FontStyle::bold}}};
-  //
-  // // Simulation
-  // std::vector<double> data = {};
-  // double time = 0.0;
-  // for (int step = 0; step < num_steps; step++) {
-  //   // Generate neighbor lists
-  //   for (auto &p : particles) {
-  //     p->set_cell_index(grid.get_index_from_pos(p->get_pos()));
-  //   }
-  //   grid.generate_all_neighbor_lists(particles);
-  //
-  //   // Interaction
-  //   for (auto &p1 : particles) {
-  //     for (auto p2 : p1->get_neighbors_list())
-  //       p1->interact(*p2);
-  //   }
-  //
-  //   // Velocity Verlet integration
-  //   for (auto &p : particles) {
-  //     p->calc_new_pos(dt);
-  //   }
-  //   for (auto &p : particles) {
-  //     p->calc_acc();
-  //   }
-  //   for (auto &p : particles) {
-  //     p->calc_new_vel(dt);
-  //     p->check_wall_collision(width, height);
-  //   }
-  //
-  //   // Data related
-  //   append_new_data(particles, data);
-  //   time += dt;
-  //
-  //   // Progress bar update
-  //   progress_perc = (int)((float)step / (float)num_steps * 100);
-  //   bar.set_progress(progress_perc);
-  //   pgtext = "Simulation running: " + std::to_string(step) + "/" +
-  //            std::to_string(num_steps);
-  //   bar.set_option(indicators::option::PostfixText{pgtext});
-  //
-  //   // test
-  //   if (particles[0]->neighbor_ids().size())
-  //     std::cerr << particles[0]->get_id() << std::endl;
-  // }
-  //
-  // // Save data
-  // std::vector<double> box_size = {width, height};
-  // std::vector<unsigned long> num_particles_vec = {
-  //     static_cast<unsigned long>(num_particles)};
-  // save_data(filename, box_size, num_particles_vec, num_steps, data);
+  std::vector<vec2> points = grid.lattice_points();
+
+  // init particles
+  double x, y;
+  int index1D;
+  std::vector<Particle *> particles;
+  for (int i = 0; i < num_particles; i++) {
+    vec2 vel = glm::circularRand(1.0E0);
+    particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0E-1));
+  }
+
+  // Progress bar
+  int progress_perc = 0;
+  std::string pgtext = "Simulation running: 0/" + std::to_string(num_particles);
+  indicators::ProgressBar bar{
+      indicators::option::BarWidth{100},
+      indicators::option::Start{"["},
+      indicators::option::Fill{"■"},
+      indicators::option::Lead{"■"},
+      indicators::option::Remainder{"-"},
+      indicators::option::End{" ]"},
+      indicators::option::PostfixText{pgtext},
+      indicators::option::FontStyles{
+          std::vector<indicators::FontStyle>{indicators::FontStyle::bold}}};
+
+  // Simulation
+  std::vector<double> data = {};
+  double time = 0.0;
+  for (int step = 0; step < num_steps; step++) {
+    // Generate neighbor lists
+    for (auto &p : particles) {
+      p->set_cell_index(grid.get_index_from_pos(p->get_pos()));
+    }
+    grid.generate_all_particles_neighbor_lists(particles);
+
+    // Interaction
+    for (auto &p1 : particles) {
+      for (auto p2 : p1->get_neighbors_list())
+        p1->interact(*p2);
+    }
+
+    // Velocity Verlet integration
+    for (auto &p : particles) {
+      p->calc_new_pos(dt);
+    }
+    for (auto &p : particles) {
+      p->calc_acc();
+    }
+    for (auto &p : particles) {
+      p->calc_new_vel(dt);
+      p->check_wall_collision(width, height);
+    }
+
+    // Data related
+    append_new_data(particles, data);
+    time += dt;
+
+    // Progress bar update
+    progress_perc = (int)((float)step / (float)num_steps * 100);
+    bar.set_progress(progress_perc);
+    pgtext = "Simulation running: " + std::to_string(step) + "/" +
+             std::to_string(num_steps);
+    bar.set_option(indicators::option::PostfixText{pgtext});
+
+    // test
+    if (particles[0]->neighbor_ids().size())
+      std::cerr << particles[0]->get_id() << std::endl;
+  }
+
+  // Save data
+  std::vector<double> box_size = {width, height};
+  std::vector<unsigned long> num_particles_vec = {
+      static_cast<unsigned long>(num_particles)};
+  save_data(filename, box_size, num_particles_vec, num_steps, data);
 
   return 0;
 }
