@@ -118,8 +118,8 @@ int square_to_linear(int i, int j, int num_cols) {
   return i * num_cols + j;
 }
 
-std::vector<int> neighboring_indices(int index, int num_rows, int num_cols,
-                                     int M, int wrap_x, int wrap_y) {
+std::vector<int> get_neighboring_indices(int index, int num_rows, int num_cols,
+                                         int M, int wrap_x, int wrap_y) {
   // Returns a list of the 1D indices of the neighboring cell with the given 1D
   // index. Neighbors are considered to be all cells that are M={1,2,3,...}
   // cells away from the given cell, either horizontally, vertically or both.
@@ -164,14 +164,6 @@ double F_LJ(double S, double x) {
   return -1.0 * 24.0 * LJ_E * S_6 * (std::pow(x, 6.0) - 2 * S_6) /
          std::pow(x, 13.0);
 }
-
-// /****************************************/
-// /*        Classes (headers only)        */
-// /****************************************/
-//
-// class Particle;
-// class Cell;
-// class Grid;
 
 /*************************/
 /*        Classes        */
@@ -325,7 +317,8 @@ public:
 
 class Cell {
   int index;
-  std::vector<int *> neighbor_indices;
+  std::vector<int> neighbor_indices;
+  std::vector<Cell *> neighbor_cells;
   std::vector<Particle *> particles;
 
 public:
@@ -341,7 +334,13 @@ public:
     this->reset();
   }
 
-  int get_id() const { return this->index; }
+  int get_index() const { return this->index; }
+
+  std::vector<int> get_indices_of_neighbor_cells() const {
+    return this->neighbor_indices;
+  }
+
+  std::vector<Cell *> get_neighboring_cells() { return this->neighbor_cells; }
 
   void add_particle(Particle *particle) {
     this->particles.push_back(particle);
@@ -358,10 +357,18 @@ public:
   }
 
   int is_empty() const { return this->particles.empty(); }
+
+  void generate_neighbor_indices(int num_rows, int num_cols, int M, int wrap_x,
+                                 int wrap_y) {
+    this->neighbor_indices = get_neighboring_indices(
+        this->index, num_rows, num_cols, M, wrap_x, wrap_y);
+  }
+
+  void add_neighbor_cell(Cell *cell) { this->neighbor_cells.push_back(cell); }
 };
 
 class Grid {
-  int num_rows, num_cols;
+  int num_rows, num_cols, M, wrap_x, wrap_y;
   double width, height, cell_width, cell_height;
   std::vector<Cell *> cells;
 
@@ -379,13 +386,17 @@ public:
   }
 
   Grid(const int &num_rows, const int &num_cols, const double &width,
-       const double &height) {
+       const double &height, const int &M, const int &wrap_x,
+       const int &wrap_y) {
     this->num_rows = num_rows;
     this->num_cols = num_cols;
     this->width = width;
     this->height = height;
     this->cell_width = width / (double)num_rows;
     this->cell_height = height / (double)num_cols;
+    this->M = M;
+    this->wrap_x = wrap_x;
+    this->wrap_y = wrap_y;
     this->init_cells();
   }
 
@@ -425,6 +436,8 @@ public:
     return index1D;
   }
 
+  Cell *get_cell(int index) { return this->cells[index]; }
+
   void add_particles(std::vector<Particle *> particles) {
     int cell_index;
     for (auto particle : particles) {
@@ -440,32 +453,40 @@ public:
     return this->cells[index]->get_particles();
   }
 
-  std::vector<Particle *> get_particles_from_neighboring_cels(int index, int M,
-                                                              int wrap_x,
-                                                              int wrap_y) {
-    std::vector<Particle *> neighbors = {};
-    std::vector<Particle *> particles_in_cell = {};
-    std::vector<int> neighbor_cell_1D_indices = neighboring_indices(
-        index, this->num_rows, this->num_cols, M, wrap_x, wrap_y);
-    for (auto idx : neighbor_cell_1D_indices) {
-      particles_in_cell = this->cells[idx]->get_particles();
-      for (auto particle : particles_in_cell) {
-        neighbors.push_back(particle);
+  void generate_cell_neighbors_lists() {
+    for (auto &cell : this->cells) {
+      cell->generate_neighbor_indices(this->num_rows, this->num_cols, this->M,
+                                      this->wrap_x, this->wrap_y);
+      for (auto cell_index : cell->get_indices_of_neighbor_cells()) {
+        cell->add_neighbor_cell(this->cells[cell_index]);
       }
     }
+  }
+
+  std::vector<Particle *> get_particles_from_neighboring_cells(int index) {
+    std::vector<Particle *> neighbors = {};
+    std::vector<int> neighbor_cell_1D_indices =
+        get_neighboring_indices(index, this->num_rows, this->num_cols, this->M,
+                                this->wrap_x, this->wrap_y);
+    for (auto idx : neighbor_cell_1D_indices)
+      for (auto particle : this->cells[idx]->get_particles())
+        neighbors.push_back(particle);
     return neighbors;
   }
 
-  void generate_neighbor_list(Particle *particle, int M, int wrap_x,
-                              int wrap_y) {
+  void generate_neighbor_list(Particle *particle) {
     particle->reset_neighbors();
     std::vector<Particle *> neighbors =
-        this->get_particles_from_neighboring_cels(particle->get_cell_index(), M,
-                                                  wrap_x, wrap_y);
+        this->get_particles_from_neighboring_cells(particle->get_cell_index());
     for (auto neighbor : neighbors) {
       if (neighbor->get_id() != particle->get_id())
         particle->add_neighbor(neighbor);
     }
+  }
+
+  void generate_all_neighbor_lists(std::vector<Particle *> particles) {
+    for (auto &particle : particles)
+      this->generate_neighbor_list(particle);
   }
 
   std::vector<vec2> lattice_points() {
@@ -532,8 +553,7 @@ void append_new_data(const std::vector<Particle *> particles,
 
 void save_data(const std::string &filename, const std::vector<double> box_size,
                const std::vector<unsigned long> num_particles,
-               unsigned long num_steps,
-               const std::vector<double> data) {
+               unsigned long num_steps, const std::vector<double> data) {
   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
   cnpy::npz_save(filename, "num_particles", &num_particles[0], {1}, "a");
   cnpy::npz_save(filename, "trajectories", &data[0],
@@ -560,71 +580,85 @@ int main(int argc, char *argv[]) {
 
   // test
   int approx_sqrt_num_particles = (int)ceil(std::sqrt(num_particles));
-  Grid grid(approx_sqrt_num_particles, approx_sqrt_num_particles, width,
-            height);
-  std::vector<vec2> points = grid.lattice_points();
+  Grid grid(approx_sqrt_num_particles, approx_sqrt_num_particles, width, height,
+            1, 0, 0);
+  grid.generate_cell_neighbors_lists();
 
-  // init particles
-  double x, y;
-  int index1D;
-  std::vector<Particle *> particles;
-  for (int i = 0; i < num_particles; i++) {
-    vec2 vel = glm::circularRand(1.0E0);
-    particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0E-1));
-  }
-
-  // Progress bar
-  int progress_perc = 0;
-  std::string pgtext = "Simulation running: 0/" + std::to_string(num_particles);
-  indicators::ProgressBar bar{
-      indicators::option::BarWidth{100},
-      indicators::option::Start{"["},
-      indicators::option::Fill{"■"},
-      indicators::option::Lead{"■"},
-      indicators::option::Remainder{"-"},
-      indicators::option::End{" ]"},
-      indicators::option::PostfixText{pgtext},
-      indicators::option::FontStyles{
-          std::vector<indicators::FontStyle>{indicators::FontStyle::bold}}};
-
-  // Simulation
-  std::vector<double> data = {};
-  double time = 0.0;
-  for (int step = 0; step < num_steps; step++) {
-    for (auto &p1 : particles) {
-      for (auto p2 : particles) {
-        if (p1->get_id() != p2->get_id()) {
-          p1->interact(*p2);
-        }
-      }
-    }
-
-    for (auto &p : particles) {
-      p->calc_new_pos(dt);
-    }
-    for (auto &p : particles) {
-      p->calc_acc();
-    }
-    for (auto &p : particles) {
-      p->calc_new_vel(dt);
-      p->check_wall_collision(width, height);
-    }
-
-    append_new_data(particles, data);
-    time += dt;
-
-    progress_perc = (int)((float)step / (float)num_steps * 100);
-    bar.set_progress(progress_perc);
-    pgtext = "Simulation running: " + std::to_string(step) + "/" + std::to_string(num_steps);
-    bar.set_option(indicators::option::PostfixText{pgtext});
-  }
-
-  // Save data
-  std::vector<double> box_size = {width, height};
-  std::vector<unsigned long> num_particles_vec = {
-      static_cast<unsigned long>(num_particles)};
-  save_data(filename, box_size, num_particles_vec,
-            num_steps, data);
+  // std::vector<vec2> points = grid.lattice_points();
+  //
+  //
+  // // init particles
+  // double x, y;
+  // int index1D;
+  // std::vector<Particle *> particles;
+  // for (int i = 0; i < num_particles; i++) {
+  //   vec2 vel = glm::circularRand(1.0E0);
+  //   particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0E-1));
+  // }
+  //
+  // // Progress bar
+  // int progress_perc = 0;
+  // std::string pgtext = "Simulation running: 0/" +
+  // std::to_string(num_particles); indicators::ProgressBar bar{
+  //     indicators::option::BarWidth{100},
+  //     indicators::option::Start{"["},
+  //     indicators::option::Fill{"■"},
+  //     indicators::option::Lead{"■"},
+  //     indicators::option::Remainder{"-"},
+  //     indicators::option::End{" ]"},
+  //     indicators::option::PostfixText{pgtext},
+  //     indicators::option::FontStyles{
+  //         std::vector<indicators::FontStyle>{indicators::FontStyle::bold}}};
+  //
+  // // Simulation
+  // std::vector<double> data = {};
+  // double time = 0.0;
+  // for (int step = 0; step < num_steps; step++) {
+  //   // Generate neighbor lists
+  //   for (auto &p : particles) {
+  //     p->set_cell_index(grid.get_index_from_pos(p->get_pos()));
+  //   }
+  //   grid.generate_all_neighbor_lists(particles);
+  //
+  //   // Interaction
+  //   for (auto &p1 : particles) {
+  //     for (auto p2 : p1->get_neighbors_list())
+  //       p1->interact(*p2);
+  //   }
+  //
+  //   // Velocity Verlet integration
+  //   for (auto &p : particles) {
+  //     p->calc_new_pos(dt);
+  //   }
+  //   for (auto &p : particles) {
+  //     p->calc_acc();
+  //   }
+  //   for (auto &p : particles) {
+  //     p->calc_new_vel(dt);
+  //     p->check_wall_collision(width, height);
+  //   }
+  //
+  //   // Data related
+  //   append_new_data(particles, data);
+  //   time += dt;
+  //
+  //   // Progress bar update
+  //   progress_perc = (int)((float)step / (float)num_steps * 100);
+  //   bar.set_progress(progress_perc);
+  //   pgtext = "Simulation running: " + std::to_string(step) + "/" +
+  //            std::to_string(num_steps);
+  //   bar.set_option(indicators::option::PostfixText{pgtext});
+  //
+  //   // test
+  //   if (particles[0]->neighbor_ids().size())
+  //     std::cerr << particles[0]->get_id() << std::endl;
+  // }
+  //
+  // // Save data
+  // std::vector<double> box_size = {width, height};
+  // std::vector<unsigned long> num_particles_vec = {
+  //     static_cast<unsigned long>(num_particles)};
+  // save_data(filename, box_size, num_particles_vec, num_steps, data);
 
   return 0;
 }
