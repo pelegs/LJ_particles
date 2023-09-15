@@ -45,6 +45,7 @@ const double sqrt_2 = glm::root_two<double>();
 const double one_over_sqrt_2 = 1.0 / sqrt_2;
 
 // Physics-ish constants
+const double R_CUTOFF = 30.0;
 const double GRAV = 1.0E2;
 const double LJ_E = 1.0E6;
 
@@ -151,6 +152,8 @@ std::vector<int> get_neighboring_indices(int index, int num_rows, int num_cols,
 /*        Physics functions        */
 /***********************************/
 
+double distance1D(const double &x, const double &y) { return abs(x - y); }
+
 double U_LJ(double E, double S, double x) {
   // Lennard-Jones potential
   double S_x_6 = std::pow(S / x, 6.0);
@@ -174,7 +177,7 @@ class Particle {
   int cell_index;
   vec2 pos, vel, acc, acc_prev, force;
   double mass, mass_inv, rad;
-  std::vector<Particle *> neighbors;
+  std::vector<Particle *> neighbors_x, neighbors_y, neighbors;
 
 public:
   Particle() {
@@ -215,6 +218,8 @@ public:
   double get_radius() const { return this->rad; }
   int get_cell_index() const { return this->cell_index; }
   std::vector<Particle *> get_neighbors_list() const { return this->neighbors; }
+  std::vector<Particle *> get_neighbors_x() { return this->neighbors_x; }
+  std::vector<Particle *> get_neighbors_y() { return this->neighbors_y; }
 
   // General getters
   void set_pos(const double &x, const double &y) {
@@ -276,8 +281,25 @@ public:
   }
 
   // Neighbors related
-  void reset_neighbors() { this->neighbors.clear(); }
-  void add_neighbor(Particle *neighbor) { this->neighbors.push_back(neighbor); }
+  void reset_neighbors() {
+    this->neighbors_x.clear();
+    this->neighbors_y.clear();
+    this->neighbors.clear();
+  }
+
+  void add_neighbor(int axis, Particle *neighbor) {
+    if (axis == X)
+      this->neighbors_x.push_back(neighbor);
+    if (axis == Y)
+      this->neighbors_y.push_back(neighbor);
+  }
+
+  void set_neighbors_by_intersection() {
+    this->neighbors.clear();
+    std::set_intersection(this->neighbors_x.begin(), this->neighbors_x.end(),
+                     this->neighbors_y.begin(), this->neighbors_y.end(),
+                     std::back_inserter(this->neighbors));
+  }
 
   std::vector<int> neighbor_ids() {
     std::vector<int> ids = {};
@@ -331,6 +353,33 @@ bool comapreParticleByYPos(const Particle *lhs, const Particle *rhs) {
   return lhs->get_y() < rhs->get_y();
 }
 
+void calc_new_positions(std::vector<Particle *> particles, const double &dt) {
+  for (auto &p : particles) {
+    p->calc_new_pos(dt);
+  }
+}
+
+void calc_accelerations(std::vector<Particle *> particles) {
+  for (auto &p : particles) {
+    p->calc_acc();
+  }
+}
+
+void calc_new_velocities(std::vector<Particle *> particles, const double &dt,
+                         const double &width, const double &height) {
+  for (auto &p : particles) {
+    p->calc_new_vel(dt);
+    p->check_wall_collision(width, height);
+  }
+}
+
+void move_particles(std::vector<Particle *> particles, const double &dt,
+                    const double &width, const double &height) {
+  calc_new_positions(particles, dt);
+  calc_accelerations(particles);
+  calc_new_velocities(particles, dt, width, height);
+}
+
 void print_particles_data(const std::vector<Particle *> &particles,
                           int print_masses = 1, int print_radii = 1,
                           int print_x = 1, int print_y = 1,
@@ -382,8 +431,8 @@ void save_data(const std::string &filename, const std::vector<double> box_size,
                const std::vector<int> neighbors_matrix) {
   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
   cnpy::npz_save(filename, "num_particles", &num_particles[0], {1}, "a");
-  // cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
-  //                {num_steps, num_particles[0], num_particles[0]}, "a");
+  cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
+                 {num_steps, num_particles[0], num_particles[0]}, "a");
   cnpy::npz_save(filename, "trajectories", &trajectories[0],
                  {num_steps, num_particles[0], 2}, "a");
   // in each frame i: data[i, :, :].T <-- note the transpose!
@@ -415,7 +464,7 @@ int main(int argc, char *argv[]) {
   std::vector<Particle *> particles;
   for (int i = 0; i < num_particles; i++) {
     vec2 pos(glm::linearRand(0.0, width), glm::linearRand(0.0, height));
-    vec2 vel = glm::circularRand(1.0E0);
+    vec2 vel = glm::circularRand(1.0E1);
     particles.push_back(new Particle(i, pos, vel, 1.0, 1.0));
   }
 
@@ -445,6 +494,9 @@ int main(int argc, char *argv[]) {
   std::vector<double> trajectories = {};
   std::vector<double> x_pos = {};
   std::vector<double> y_pos = {};
+
+  // Testing neighor finding strategy
+  int i, id;
   for (int step = 0; step < num_steps; step++) {
     // Sort x- and y-position vectors
     std::sort(particles_x_pos.begin(), particles_x_pos.end(),
@@ -452,17 +504,47 @@ int main(int argc, char *argv[]) {
     std::sort(particles_y_pos.begin(), particles_y_pos.end(),
               comapreParticleByYPos);
 
+    // Create neighbor lists for particle with id (to be generalized soon)
+    for (id = 0; id < num_particles; id++) {
+      particles[id]->reset_neighbors();
+      for (i = id + 1; i < num_particles; i++) {
+        if (distance1D(particles[id]->get_x(), particles[i]->get_x()) <=
+            R_CUTOFF)
+          particles[id]->add_neighbor(X, particles[i]);
+        else
+          break;
+      }
+      for (i = id - 1; i > 0; i--) {
+        if (distance1D(particles[id]->get_x(), particles[i]->get_x()) <=
+            R_CUTOFF)
+          particles[id]->add_neighbor(X, particles[i]);
+        else
+          break;
+      }
+      for (i = id + 1; i < num_particles; i++) {
+        if (distance1D(particles[id]->get_y(), particles[i]->get_y()) <=
+            R_CUTOFF)
+          particles[id]->add_neighbor(Y, particles[i]);
+        else
+          break;
+      }
+      for (i = id - 1; i > 0; i--) {
+        if (distance1D(particles[id]->get_y(), particles[i]->get_y()) <=
+            R_CUTOFF)
+          particles[id]->add_neighbor(Y, particles[i]);
+        else
+          break;
+      }
+      particles[id]->set_neighbors_by_intersection();
+      std::fill(nmat_row.begin(), nmat_row.end(), 0);
+      for (auto neighbor : particles[id]->get_neighbors_list())
+        nmat_row[neighbor->get_id()] = 1;
+      neighbors_matrix.insert(neighbors_matrix.end(), nmat_row.begin(),
+                              nmat_row.end());
+    }
+
     // Velocity Verlet integration
-    for (auto &p : particles) {
-      p->calc_new_pos(dt);
-    }
-    for (auto &p : particles) {
-      p->calc_acc();
-    }
-    for (auto &p : particles) {
-      p->calc_new_vel(dt);
-      p->check_wall_collision(width, height);
-    }
+    move_particles(particles, dt, width, height);
 
     // Data related
     append_new_data(particles, trajectories);

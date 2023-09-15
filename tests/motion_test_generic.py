@@ -17,6 +17,9 @@ num_particles = data["num_particles"][0]
 num_frames = trajectories.shape[0]
 width, height = data["box_size"]
 neighbors_matrix = data["neighbors_matrix"]
+# for i, mat in enumerate(neighbors_matrix):
+#     print(i, np.array_equal(mat, mat.T))
+# exit()
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -40,8 +43,8 @@ for frame in tqdm(range(num_frames)):
     plt.xlim((0.0, width))
     plt.ylim((0.0, height))
     for idx in check_neighbor_ids:
-        neighbor_ids = np.where(neighbors_matrix[frame, idx] == 1)
-        for n_id in neighbor_ids[0]:
+        neighbor_ids = np.where(neighbors_matrix[frame, idx] > 0)[0]
+        for n_id in neighbor_ids:
             p0x = trajectories[frame, idx, 0]
             p0y = trajectories[frame, idx, 1]
             p1x = trajectories[frame, n_id, 0]
