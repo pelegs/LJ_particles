@@ -532,7 +532,8 @@ int main(int argc, char *argv[]) {
     // for (auto particle : particles) {
     //   for (auto neighbor : particle->get_neighbors_list()) {
     //     if (!neighbor->is_neighbor(particle)) {
-    //       std::cerr << "Frame: " << step << ", particle " << particle->get_id()
+    //       std::cerr << "Frame: " << step << ", particle " <<
+    //       particle->get_id()
     //                 << " is not in neighbor list of its neighbor "
     //                 << neighbor->get_id() << std::endl;
     //       std::cerr << "List of neighbors of particle " << particle->get_id()
@@ -546,6 +547,13 @@ int main(int argc, char *argv[]) {
     //     }
     //   }
     // }
+
+    // Interaction!
+    for (auto &particle : particles) {
+      for (auto neighbor : particle->get_neighbors_list()) {
+        particle->interact(*neighbor);
+      }
+    }
 
     // Velocity Verlet integration
     move_particles(particles, dt, width, height);
