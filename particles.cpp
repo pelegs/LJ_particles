@@ -12,6 +12,7 @@
 #include <memory>
 #include <ostream>
 #include <random>
+#include <set>
 #include <vector>
 
 // GLM-related
@@ -46,7 +47,7 @@ const double sqrt_2 = glm::root_two<double>();
 const double one_over_sqrt_2 = 1.0 / sqrt_2;
 
 // Physics-ish constants
-const double R_CUTOFF = 300.0;
+const double R_CUTOFF = 30.0;
 const double GRAV = 1.0E2;
 const double LJ_E = 1.0E6;
 
@@ -116,9 +117,9 @@ std::string join(Range const &elements, const char *const delimiter) {
   return os.str();
 }
 
-template <typename type>
-bool in_vector(const std::vector<type> &vec, const type &a) {
-  for (auto vec_element : vec)
+template <typename container, typename type>
+bool in_container(const container &cont, const type &a) {
+  for (auto vec_element : cont)
     if (vec_element == a)
       return 1;
   return 0;
@@ -153,7 +154,7 @@ class Particle {
   int cell_index;
   vec2 pos, vel, acc, acc_prev, force;
   double mass, mass_inv, rad;
-  std::vector<Particle *> neighbors_x, neighbors_y, neighbors;
+  std::set<Particle *> neighbors_x, neighbors_y, neighbors;
 
 public:
   Particle() {
@@ -193,12 +194,12 @@ public:
   double get_mass() const { return this->mass; }
   double get_radius() const { return this->rad; }
   int get_cell_index() const { return this->cell_index; }
-  std::vector<Particle *> get_neighbors_list() const { return this->neighbors; }
-  std::vector<Particle *> get_neighbors_x() { return this->neighbors_x; }
-  std::vector<Particle *> get_neighbors_y() { return this->neighbors_y; }
-  bool is_neighbor(Particle *p) { return in_vector(this->neighbors, p); }
-  bool is_neighbor_x(Particle *p) { return in_vector(this->neighbors_x, p); }
-  bool is_neighbor_y(Particle *p) { return in_vector(this->neighbors_y, p); }
+  std::set<Particle *> get_neighbors_list() const { return this->neighbors; }
+  std::set<Particle *> get_neighbors_x() { return this->neighbors_x; }
+  std::set<Particle *> get_neighbors_y() { return this->neighbors_y; }
+  bool is_neighbor(Particle *p) { return in_container(this->neighbors, p); }
+  bool is_neighbor_x(Particle *p) { return in_container(this->neighbors_x, p); }
+  bool is_neighbor_y(Particle *p) { return in_container(this->neighbors_y, p); }
 
   // General getters
   void set_pos(const double &x, const double &y) {
@@ -268,29 +269,28 @@ public:
 
   void add_neighbor(int axis, Particle *neighbor) {
     if (axis == X)
-      this->neighbors_x.push_back(neighbor);
+      this->neighbors_x.insert(neighbor);
     if (axis == Y)
-      this->neighbors_y.push_back(neighbor);
+      this->neighbors_y.insert(neighbor);
   }
 
-  void set_neighbors_by_intersection() {
+  void generate_neighbors_list_by_intersection() {
     this->neighbors.clear();
-    std::set_intersection(this->neighbors_x.begin(), this->neighbors_x.end(),
-                          this->neighbors_y.begin(), this->neighbors_y.end(),
-                          std::back_inserter(this->neighbors));
-
-    std::vector<int> neighbors_x_ids = {};
-    for (auto p : this->neighbors_x)
-      neighbors_x_ids.push_back(p->get_id());
-
-    std::vector<int> neighbors_y_ids = {};
-    for (auto p : this->neighbors_y)
-      neighbors_y_ids.push_back(p->get_id());
-
-    std::vector<int> neighbors_all_ids = {};
-    for (auto p : this->neighbors)
-      neighbors_all_ids.push_back(p->get_id());
-
+    set_intersection(this->neighbors_x.begin(), this->neighbors_x.end(),
+                     this->neighbors_y.begin(), this->neighbors_y.end(),
+                     std::inserter(this->neighbors, this->neighbors.begin()));
+    // std::vector<int> neighbors_x_ids = {};
+    // for (auto p : this->neighbors_x)
+    //   neighbors_x_ids.push_back(p->get_id());
+    //
+    // std::vector<int> neighbors_y_ids = {};
+    // for (auto p : this->neighbors_y)
+    //   neighbors_y_ids.push_back(p->get_id());
+    //
+    // std::vector<int> neighbors_all_ids = {};
+    // for (auto p : this->neighbors)
+    //   neighbors_all_ids.push_back(p->get_id());
+    //
     // std::cerr << "(" << this->id << ") neighbors in x = {"
     //           << join(neighbors_x_ids, ",") << "}, neighbors in y = {"
     //           << join(neighbors_y_ids, ",") << "}, neighbors total = {"
@@ -305,16 +305,16 @@ public:
     return ids;
   }
 
-  void remove_self_from_neighbors_list() {
-    int index = -1;
-    for (auto neighbor : this->neighbors) {
-      ++index;
-      if (this->id == neighbor->get_id()) {
-        break;
-      }
-    }
-    this->neighbors.erase(this->neighbors.begin() + index);
-  }
+  // void remove_self_from_neighbors_list() {
+  //   int index = -1;
+  //   for (auto neighbor : this->neighbors) {
+  //     ++index;
+  //     if (this->id == neighbor->get_id()) {
+  //       break;
+  //     }
+  //   }
+  //   this->neighbors.erase(this->neighbors.begin() + index);
+  // }
 
   void reset_cell_index() { this->cell_index = -1; }
   void set_cell_index(int index) { this->cell_index = index; }
@@ -513,11 +513,14 @@ int main(int argc, char *argv[]) {
               comapreParticleByYPos);
 
     // Create neighbor lists for particle with id (to be generalized soon)
+    for (auto particle : particles)
+      particle->reset_neighbors();
     find_neighbors(X, FORWARD, particles_x_pos, num_particles);
     find_neighbors(X, BACKWARDS, particles_x_pos, num_particles);
     find_neighbors(Y, FORWARD, particles_y_pos, num_particles);
     find_neighbors(Y, BACKWARDS, particles_y_pos, num_particles);
     for (auto particle : particles) {
+      particle->generate_neighbors_list_by_intersection();
       std::fill(nmat_row.begin(), nmat_row.end(), 0);
       for (auto neighbor : particle->get_neighbors_list())
         nmat_row[neighbor->get_id()] = 1;
@@ -526,20 +529,23 @@ int main(int argc, char *argv[]) {
     }
 
     // test
-    // for (auto particle : particles) {
-    //   for (auto neighbor : particle->get_neighbors_list()) {
-    //     if (!neighbor->is_neighbor(particle)) {
-    //       std::cerr << "Frame: " << step << ", particle " <<
-    //       particle->get_id()
-    //                 << " is not in neighbor list of its neighbor "
-    //                 << neighbor->get_id() << std::endl;
-    //       std::cerr << "List of neighbors of particle " << neighbor->get_id()
-    //       << ": {" << join(neighbor->neighbor_ids(), ",") << "}" <<
-    //       std::endl; std::cerr <<
-    //       "-----------------------------------------------" << std::endl;
-    //     }
-    //   }
-    // }
+    for (auto particle : particles) {
+      for (auto neighbor : particle->get_neighbors_list()) {
+        if (!neighbor->is_neighbor(particle)) {
+          std::cerr << "Frame: " << step << ", particle " << particle->get_id()
+                    << " is not in neighbor list of its neighbor "
+                    << neighbor->get_id() << std::endl;
+          std::cerr << "List of neighbors of particle " << particle->get_id()
+                    << ": {" << join(particle->neighbor_ids(), ",") << "}"
+                    << std::endl;
+          std::cerr << "List of neighbors of particle " << neighbor->get_id()
+                    << ": {" << join(neighbor->neighbor_ids(), ",") << "}"
+                    << std::endl;
+          std::cerr << "-----------------------------------------------"
+                    << std::endl;
+        }
+      }
+    }
 
     // Velocity Verlet integration
     move_particles(particles, dt, width, height);

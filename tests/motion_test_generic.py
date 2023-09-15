@@ -17,8 +17,6 @@ num_particles = trajectories.shape[1]
 num_frames = trajectories.shape[0]
 width, height = data["box_size"]
 neighbors_matrix = data["neighbors_matrix"]
-print(neighbors_matrix[5])
-exit()
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -32,7 +30,7 @@ ax.add_patch(Rectangle((0.0, 0.0), width, height, linewidth=4,
 
 colors = cm.rainbow(np.linspace(0, 1, num_particles))
 camera = Camera(plt.figure())
-check_neighbor_ids = [0, 10, 17, 63, 91, 137, 195, 220, 249]
+check_neighbor_ids = [0, 10, 13, 27, 59]
 focused_color = np.array([.0, .0, .0, 1.])
 link_color = np.array([0., .0, 1., 1.])
 for i in check_neighbor_ids:
