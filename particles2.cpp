@@ -319,15 +319,207 @@ public:
   }
 };
 
+class Cell {
+  int index;
+  std::vector<int> neighbor_indices;
+  std::vector<Cell *> neighbor_cells;
+  std::vector<Particle *> particles;
+
+public:
+  void reset() { this->particles.clear(); }
+
+  Cell() {
+    this->index = 0;
+    this->reset();
+  }
+
+  Cell(const int &id) {
+    this->index = id;
+    this->reset();
+  }
+
+  int get_index() const { return this->index; }
+
+  std::vector<int> get_indices_of_neighbor_cells() const {
+    return this->neighbor_indices;
+  }
+
+  std::vector<Cell *> get_neighboring_cells() { return this->neighbor_cells; }
+
+  void add_particle(Particle *particle) {
+    this->particles.push_back(particle);
+    particle->set_cell_index(this->index);
+  }
+
+  std::vector<Particle *> get_particles() { return this->particles; }
+
+  void print_particles() {
+    for (auto p : this->particles) {
+      std::cout << p->get_id() << ": " << glm::to_string(p->get_pos())
+                << std::endl;
+    }
+  }
+
+  int is_empty() const { return this->particles.empty(); }
+
+  void generate_neighbor_indices(int num_rows, int num_cols, int M, int wrap_x,
+                                 int wrap_y) {
+    this->neighbor_indices = get_neighboring_indices(
+        this->index, num_rows, num_cols, M, wrap_x, wrap_y);
+  }
+
+  void add_neighbor_cell(Cell *cell) { this->neighbor_cells.push_back(cell); }
+};
+
+class Grid {
+  int num_rows, num_cols, M, wrap_x, wrap_y;
+  double width, height, cell_width, cell_height;
+  std::vector<Cell *> cells;
+
+public:
+  void init_cells() {
+    int cell_index = 0;
+    this->cells.clear();
+    for (int i = 0; i < this->num_rows; ++i) {
+      for (int j = 0; j < this->num_cols; ++j) {
+        Cell *new_cell = new Cell(cell_index);
+        this->cells.push_back(new_cell);
+        cell_index++;
+      }
+    }
+  }
+
+  Grid(const int &num_rows, const int &num_cols, const double &width,
+       const double &height, const int &M, const int &wrap_x,
+       const int &wrap_y) {
+    this->num_rows = num_rows;
+    this->num_cols = num_cols;
+    this->width = width;
+    this->height = height;
+    this->cell_width = width / (double)num_rows;
+    this->cell_height = height / (double)num_cols;
+    this->M = M;
+    this->wrap_x = wrap_x;
+    this->wrap_y = wrap_y;
+    this->init_cells();
+  }
+
+  // Getters
+  int get_num_rows() { return this->num_rows; }
+  int get_num_cols() { return this->num_cols; }
+  double get_width() { return this->width; }
+  double get_height() { return this->height; }
+  double get_cell_width() { return this->cell_width; }
+  double get_cell_height() { return this->cell_height; }
+
+  void print_cell_info() {
+    for (auto cell : this->cells) {
+      // print using cell function
+    }
+  }
+
+  void reset() {
+    for (auto cell : this->cells) {
+      cell->reset();
+    }
+  }
+
+  int get_index_from_pos(const vec2 &pos) const {
+    int cell_index, row_index, col_index;
+    if (pos[0] < 0.0 || pos[1] < 0.0 || pos[0] >= this->width ||
+        pos[1] >= this->height) {
+      return 0;
+    }
+    row_index = (int)std::floor((pos[Y] / this->height) * (this->num_rows));
+    col_index = (int)std::floor((pos[X] / this->width) * (this->num_cols));
+
+    int index1D = square_to_linear(row_index, col_index, this->num_cols);
+    // std::cout << glm::to_string(pos) << " -> ";
+    // std::cout << row_index << ", " << col_index << " -> " << index1D <<
+    // std::endl;
+    return index1D;
+  }
+
+  Cell *get_cell(int index) { return this->cells[index]; }
+
+  void reset_cells() {
+    for (auto cell : this->cells)
+      cell->reset();
+  }
+
+  void add_particles(std::vector<Particle *> particles) {
+    int cell_index;
+    for (auto particle : particles) {
+      cell_index = this->get_index_from_pos(particle->get_pos());
+      // std::cout << glm::to_string(particle->get_pos()) << " -> " <<
+      // cell_index
+      //           << std::endl;
+      this->cells[cell_index]->add_particle(particle);
+    }
+  }
+
+  std::vector<Particle *> get_particles_from_cell(int index) {
+    return this->cells[index]->get_particles();
+  }
+
+  void generate_cell_neighbors_lists() {
+    for (auto &cell : this->cells) {
+      cell->reset();
+      cell->generate_neighbor_indices(this->num_rows, this->num_cols, this->M,
+                                      this->wrap_x, this->wrap_y);
+      for (auto cell_index : cell->get_indices_of_neighbor_cells()) {
+        cell->add_neighbor_cell(this->cells[cell_index]);
+      }
+    }
+  }
+
+  std::vector<Particle *> get_particles_from_neighboring_cells(int index) {
+    std::vector<Particle *> neighbors = {};
+    for (auto cell : this->cells[index]->get_neighboring_cells()) {
+      for (auto particle : cell->get_particles()) {
+        neighbors.push_back(particle);
+      }
+    }
+    return neighbors;
+  }
+
+  void generate_particle_neighbors_list(Particle *particle) {
+    std::vector<Particle *> neighbors =
+        this->get_particles_from_neighboring_cells(particle->get_cell_index());
+    for (auto neighbor : neighbors) {
+      if (neighbor->get_id() != particle->get_id())
+        particle->add_neighbor(neighbor);
+    }
+  }
+
+  void
+  generate_all_particles_neighbor_lists(std::vector<Particle *> particles) {
+    for (auto &particle : particles)
+      this->generate_particle_neighbors_list(particle);
+  }
+
+  std::vector<vec2> lattice_points() {
+    double dx = this->width / (double)(this->num_cols + 1);
+    double dy = this->height / (double)(this->num_rows + 1);
+    std::vector<vec2> points = {};
+    for (int i = 1; i <= this->num_cols; ++i) {
+      for (int j = 1; j <= this->num_rows; ++j) {
+        points.push_back(vec2(i * dx, j * dy));
+      }
+    }
+    return points;
+  }
+};
+
 /******************************************/
 /*        Class-relevant functions        */
 /******************************************/
 
-bool comapreParticleByXPos(const Particle *lhs, const Particle *rhs) {
+bool comapreParticleByXPos(const Particle *lhs, const Particle *rhs){
   return lhs->get_x() < rhs->get_x();
 }
 
-bool comapreParticleByYPos(const Particle *lhs, const Particle *rhs) {
+bool comapreParticleByYPos(const Particle *lhs, const Particle *rhs){
   return lhs->get_y() < rhs->get_y();
 }
 
@@ -382,8 +574,8 @@ void save_data(const std::string &filename, const std::vector<double> box_size,
                const std::vector<int> neighbors_matrix) {
   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
   cnpy::npz_save(filename, "num_particles", &num_particles[0], {1}, "a");
-  // cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
-  //                {num_steps, num_particles[0], num_particles[0]}, "a");
+  cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
+                 {num_steps, num_particles[0], num_particles[0]}, "a");
   cnpy::npz_save(filename, "trajectories", &trajectories[0],
                  {num_steps, num_particles[0], 2}, "a");
   // in each frame i: data[i, :, :].T <-- note the transpose!
@@ -406,25 +598,22 @@ int main(int argc, char *argv[]) {
   std::string filename = argv[6];
   filename += ".npz";
 
-  // Neighbor data
+  // test
+  int approx_sqrt_num_particles = (int)ceil(std::sqrt(num_particles));
+  Grid grid(approx_sqrt_num_particles, approx_sqrt_num_particles, width, height,
+            1, 0, 0);
+  grid.generate_cell_neighbors_lists();
+  std::vector<vec2> points = grid.lattice_points();
   std::vector<int> neighbors_matrix = {};
   std::vector<int> nmat_row(num_particles, 0);
 
   // init particles
   double x, y;
+  int index1D;
   std::vector<Particle *> particles;
   for (int i = 0; i < num_particles; i++) {
-    vec2 pos(glm::linearRand(0.0, width), glm::linearRand(0.0, height));
-    vec2 vel = glm::circularRand(1.0E0);
-    particles.push_back(new Particle(i, pos, vel, 1.0, 1.0));
-  }
-
-  // Sorted vecs
-  std::vector<Particle *> particles_x_pos = {};
-  std::vector<Particle *> particles_y_pos = {};
-  for (auto particle : particles) {
-    particles_x_pos.push_back(particle);
-    particles_y_pos.push_back(particle);
+    vec2 vel = glm::circularRand(1.0E1);
+    particles.push_back(new Particle(i, points[i], vel, 1.0, 1.0));
   }
 
   // Progress bar
@@ -443,14 +632,33 @@ int main(int argc, char *argv[]) {
 
   // Simulation
   std::vector<double> trajectories = {};
-  std::vector<double> x_pos = {};
-  std::vector<double> y_pos = {};
+  double time = 0.0;
   for (int step = 0; step < num_steps; step++) {
-    // Sort x- and y-position vectors
-    std::sort(particles_x_pos.begin(), particles_x_pos.end(),
-              comapreParticleByXPos);
-    std::sort(particles_y_pos.begin(), particles_y_pos.end(),
-              comapreParticleByYPos);
+
+    // Generate neighbor lists
+    for (auto &p : particles) {
+      p->set_cell_index(grid.get_index_from_pos(p->get_pos()));
+      p->reset_neighbors();
+    }
+    grid.reset_cells();
+    grid.add_particles(particles);
+    grid.generate_all_particles_neighbor_lists(particles);
+
+    // Test neighbors
+    for (auto p : particles) {
+      nmat_row = std::vector<int>(num_particles, 0);
+      for (auto neighbor : p->get_neighbors_list()) {
+        nmat_row[neighbor->get_id()] = 1;
+      }
+      neighbors_matrix.insert(neighbors_matrix.end(), nmat_row.begin(),
+                              nmat_row.end());
+    }
+
+    // Interaction
+    // for (auto &p1 : particles)
+    //   for (auto p2 : p1->get_neighbors_list())
+    //     if (p1->get_id() != p2->get_id())
+    //       p1->interact(*p2);
 
     // Velocity Verlet integration
     for (auto &p : particles) {
@@ -466,6 +674,7 @@ int main(int argc, char *argv[]) {
 
     // Data related
     append_new_data(particles, trajectories);
+    time += dt;
 
     // Progress bar update
     progress_perc = (int)((float)step / (float)num_steps * 100);
