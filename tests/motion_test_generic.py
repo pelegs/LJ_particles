@@ -13,13 +13,12 @@ data = np.load(argv[1])
 # Process data
 skip = int(argv[3])
 trajectories = data["trajectories"][::skip, :, :]
-num_particles = data["num_particles"][0]
+num_particles = trajectories.shape[1]
 num_frames = trajectories.shape[0]
 width, height = data["box_size"]
 neighbors_matrix = data["neighbors_matrix"]
-# for i, mat in enumerate(neighbors_matrix):
-#     print(i, np.array_equal(mat, mat.T))
-# exit()
+print(neighbors_matrix[5])
+exit()
 
 fig = plt.figure()
 ax = fig.add_subplot(111)

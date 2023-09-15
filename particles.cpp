@@ -6,6 +6,7 @@
 #include <indicators/progress_bar.hpp>
 // #include <indicators/cursor_control.hpp>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <math.h>
 #include <memory>
@@ -45,7 +46,7 @@ const double sqrt_2 = glm::root_two<double>();
 const double one_over_sqrt_2 = 1.0 / sqrt_2;
 
 // Physics-ish constants
-const double R_CUTOFF = 30.0;
+const double R_CUTOFF = 300.0;
 const double GRAV = 1.0E2;
 const double LJ_E = 1.0E6;
 
@@ -61,6 +62,8 @@ const int ROW = 0;
 const int COL = 1;
 const int X = 0;
 const int Y = 1;
+const int FORWARD = 1;
+const int BACKWARDS = -1;
 
 /***********************************/
 /*        General functions        */
@@ -97,55 +100,28 @@ std::vector<double> linspace(T start_in, T end_in, int num_in) {
   return linspaced;
 }
 
-int *linear_to_square(int id, int num_cols) {
-  // Converts 1D index into 2D index.
-  // Example: given 5 cells in each row (num_rows), the 1D index 11 is converted
-  // into the 2D index [2,1], and the 1D index 37 is converted into the 2D index
-  // [7,2].
-  // This is the inverse of the function square_to_linear().
-  // (NOTE: row counting starts from 0.)
-  static int indices[2];
-  indices[ROW] = id / num_cols;
-  indices[COL] = id % num_cols;
-  return indices;
-}
+template <typename Range, typename Value = typename Range::value_type>
+std::string join(Range const &elements, const char *const delimiter) {
+  std::ostringstream os;
+  auto b = begin(elements), e = end(elements);
 
-int square_to_linear(int i, int j, int num_cols) {
-  // Converts 2D index into 1D index.
-  // Example: given 5 cells in each row (num_rows), the 2D index [2,1] is
-  // converted into the 1D index 11, and the 1D index [7,2] is converted into
-  // the 1D index 37. This is the inverse of the function *linear_to_square().
-  // (NOTE: row counting starts from 0.)
-  return i * num_cols + j;
-}
-
-std::vector<int> get_neighboring_indices(int index, int num_rows, int num_cols,
-                                         int M, int wrap_x, int wrap_y) {
-  // Returns a list of the 1D indices of the neighboring cell with the given 1D
-  // index. Neighbors are considered to be all cells that are M={1,2,3,...}
-  // cells away from the given cell, either horizontally, vertically or both.
-  // The grid can be wrapped both horizontally and vertically.
-  int *indices = linear_to_square(index, num_cols);
-  int i = indices[0];
-  int j = indices[1];
-  int I, J;
-  std::vector<int> neighbors = {};
-  for (int ix = -M; ix <= M; ++ix) {
-    I = i + ix;
-    if (wrap_x)
-      I = ((I % num_rows) + num_rows) % num_rows;
-    if (I < 0 || I >= num_rows)
-      continue;
-    for (int jy = -M; jy <= M; ++jy) {
-      J = j + jy;
-      if (wrap_y)
-        J = ((J % num_cols) + num_cols) % num_cols;
-      if (J < 0 || J >= num_cols)
-        continue;
-      neighbors.push_back(square_to_linear(I, J, num_cols));
-    }
+  if (b != e) {
+    std::copy(b, prev(e), std::ostream_iterator<Value>(os, delimiter));
+    b = prev(e);
   }
-  return neighbors;
+  if (b != e) {
+    os << *b;
+  }
+
+  return os.str();
+}
+
+template <typename type>
+bool in_vector(const std::vector<type> &vec, const type &a) {
+  for (auto vec_element : vec)
+    if (vec_element == a)
+      return 1;
+  return 0;
 }
 
 /***********************************/
@@ -220,6 +196,9 @@ public:
   std::vector<Particle *> get_neighbors_list() const { return this->neighbors; }
   std::vector<Particle *> get_neighbors_x() { return this->neighbors_x; }
   std::vector<Particle *> get_neighbors_y() { return this->neighbors_y; }
+  bool is_neighbor(Particle *p) { return in_vector(this->neighbors, p); }
+  bool is_neighbor_x(Particle *p) { return in_vector(this->neighbors_x, p); }
+  bool is_neighbor_y(Particle *p) { return in_vector(this->neighbors_y, p); }
 
   // General getters
   void set_pos(const double &x, const double &y) {
@@ -297,8 +276,25 @@ public:
   void set_neighbors_by_intersection() {
     this->neighbors.clear();
     std::set_intersection(this->neighbors_x.begin(), this->neighbors_x.end(),
-                     this->neighbors_y.begin(), this->neighbors_y.end(),
-                     std::back_inserter(this->neighbors));
+                          this->neighbors_y.begin(), this->neighbors_y.end(),
+                          std::back_inserter(this->neighbors));
+
+    std::vector<int> neighbors_x_ids = {};
+    for (auto p : this->neighbors_x)
+      neighbors_x_ids.push_back(p->get_id());
+
+    std::vector<int> neighbors_y_ids = {};
+    for (auto p : this->neighbors_y)
+      neighbors_y_ids.push_back(p->get_id());
+
+    std::vector<int> neighbors_all_ids = {};
+    for (auto p : this->neighbors)
+      neighbors_all_ids.push_back(p->get_id());
+
+    // std::cerr << "(" << this->id << ") neighbors in x = {"
+    //           << join(neighbors_x_ids, ",") << "}, neighbors in y = {"
+    //           << join(neighbors_y_ids, ",") << "}, neighbors total = {"
+    //           << join(neighbors_all_ids, ",") << "}" << std::endl;
   }
 
   std::vector<int> neighbor_ids() {
@@ -426,16 +422,29 @@ void append_new_data(const std::vector<Particle *> particles,
 }
 
 void save_data(const std::string &filename, const std::vector<double> box_size,
-               const std::vector<unsigned long> num_particles,
-               unsigned long num_steps, const std::vector<double> trajectories,
+               unsigned long num_particles, unsigned long num_steps,
+               const std::vector<double> trajectories,
                const std::vector<int> neighbors_matrix) {
   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
-  cnpy::npz_save(filename, "num_particles", &num_particles[0], {1}, "a");
   cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
-                 {num_steps, num_particles[0], num_particles[0]}, "a");
+                 {num_steps, num_particles, num_particles}, "a");
   cnpy::npz_save(filename, "trajectories", &trajectories[0],
-                 {num_steps, num_particles[0], 2}, "a");
+                 {num_steps, num_particles, 2}, "a");
   // in each frame i: data[i, :, :].T <-- note the transpose!
+}
+
+void find_neighbors(const int &axis, const int &dir,
+                    const std::vector<Particle *> particle_list,
+                    const int &num_particles) {
+  for (int id = 0; id < num_particles; id++) {
+    for (int i = id + dir; i >= 0 && i < num_particles; i += dir) {
+      if (distance1D(particle_list[id]->get_pos()[axis],
+                     particle_list[i]->get_pos()[axis]) <= R_CUTOFF)
+        particle_list[id]->add_neighbor(axis, particle_list[i]);
+      else
+        break;
+    }
+  }
 }
 
 /**********************/
@@ -496,7 +505,6 @@ int main(int argc, char *argv[]) {
   std::vector<double> y_pos = {};
 
   // Testing neighor finding strategy
-  int i, id;
   for (int step = 0; step < num_steps; step++) {
     // Sort x- and y-position vectors
     std::sort(particles_x_pos.begin(), particles_x_pos.end(),
@@ -505,43 +513,33 @@ int main(int argc, char *argv[]) {
               comapreParticleByYPos);
 
     // Create neighbor lists for particle with id (to be generalized soon)
-    for (id = 0; id < num_particles; id++) {
-      particles[id]->reset_neighbors();
-      for (i = id + 1; i < num_particles; i++) {
-        if (distance1D(particles[id]->get_x(), particles[i]->get_x()) <=
-            R_CUTOFF)
-          particles[id]->add_neighbor(X, particles[i]);
-        else
-          break;
-      }
-      for (i = id - 1; i > 0; i--) {
-        if (distance1D(particles[id]->get_x(), particles[i]->get_x()) <=
-            R_CUTOFF)
-          particles[id]->add_neighbor(X, particles[i]);
-        else
-          break;
-      }
-      for (i = id + 1; i < num_particles; i++) {
-        if (distance1D(particles[id]->get_y(), particles[i]->get_y()) <=
-            R_CUTOFF)
-          particles[id]->add_neighbor(Y, particles[i]);
-        else
-          break;
-      }
-      for (i = id - 1; i > 0; i--) {
-        if (distance1D(particles[id]->get_y(), particles[i]->get_y()) <=
-            R_CUTOFF)
-          particles[id]->add_neighbor(Y, particles[i]);
-        else
-          break;
-      }
-      particles[id]->set_neighbors_by_intersection();
+    find_neighbors(X, FORWARD, particles_x_pos, num_particles);
+    find_neighbors(X, BACKWARDS, particles_x_pos, num_particles);
+    find_neighbors(Y, FORWARD, particles_y_pos, num_particles);
+    find_neighbors(Y, BACKWARDS, particles_y_pos, num_particles);
+    for (auto particle : particles) {
       std::fill(nmat_row.begin(), nmat_row.end(), 0);
-      for (auto neighbor : particles[id]->get_neighbors_list())
+      for (auto neighbor : particle->get_neighbors_list())
         nmat_row[neighbor->get_id()] = 1;
       neighbors_matrix.insert(neighbors_matrix.end(), nmat_row.begin(),
                               nmat_row.end());
     }
+
+    // test
+    // for (auto particle : particles) {
+    //   for (auto neighbor : particle->get_neighbors_list()) {
+    //     if (!neighbor->is_neighbor(particle)) {
+    //       std::cerr << "Frame: " << step << ", particle " <<
+    //       particle->get_id()
+    //                 << " is not in neighbor list of its neighbor "
+    //                 << neighbor->get_id() << std::endl;
+    //       std::cerr << "List of neighbors of particle " << neighbor->get_id()
+    //       << ": {" << join(neighbor->neighbor_ids(), ",") << "}" <<
+    //       std::endl; std::cerr <<
+    //       "-----------------------------------------------" << std::endl;
+    //     }
+    //   }
+    // }
 
     // Velocity Verlet integration
     move_particles(particles, dt, width, height);
@@ -559,9 +557,7 @@ int main(int argc, char *argv[]) {
 
   // Save data
   std::vector<double> box_size = {width, height};
-  std::vector<unsigned long> num_particles_vec = {
-      static_cast<unsigned long>(num_particles)};
-  save_data(filename, box_size, num_particles_vec, num_steps, trajectories,
+  save_data(filename, box_size, num_particles, num_steps, trajectories,
             neighbors_matrix);
 
   return 0;
