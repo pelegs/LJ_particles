@@ -512,7 +512,7 @@ int main(int argc, char *argv[]) {
     std::sort(particles_y_pos.begin(), particles_y_pos.end(),
               comapreParticleByYPos);
 
-    // Create neighbor lists for particle with id (to be generalized soon)
+    // Create neighbor lists for particles
     for (auto particle : particles)
       particle->reset_neighbors();
     find_neighbors(X, FORWARD, particles_x_pos, num_particles);
@@ -529,23 +529,23 @@ int main(int argc, char *argv[]) {
     }
 
     // test
-    for (auto particle : particles) {
-      for (auto neighbor : particle->get_neighbors_list()) {
-        if (!neighbor->is_neighbor(particle)) {
-          std::cerr << "Frame: " << step << ", particle " << particle->get_id()
-                    << " is not in neighbor list of its neighbor "
-                    << neighbor->get_id() << std::endl;
-          std::cerr << "List of neighbors of particle " << particle->get_id()
-                    << ": {" << join(particle->neighbor_ids(), ",") << "}"
-                    << std::endl;
-          std::cerr << "List of neighbors of particle " << neighbor->get_id()
-                    << ": {" << join(neighbor->neighbor_ids(), ",") << "}"
-                    << std::endl;
-          std::cerr << "-----------------------------------------------"
-                    << std::endl;
-        }
-      }
-    }
+    // for (auto particle : particles) {
+    //   for (auto neighbor : particle->get_neighbors_list()) {
+    //     if (!neighbor->is_neighbor(particle)) {
+    //       std::cerr << "Frame: " << step << ", particle " << particle->get_id()
+    //                 << " is not in neighbor list of its neighbor "
+    //                 << neighbor->get_id() << std::endl;
+    //       std::cerr << "List of neighbors of particle " << particle->get_id()
+    //                 << ": {" << join(particle->neighbor_ids(), ",") << "}"
+    //                 << std::endl;
+    //       std::cerr << "List of neighbors of particle " << neighbor->get_id()
+    //                 << ": {" << join(neighbor->neighbor_ids(), ",") << "}"
+    //                 << std::endl;
+    //       std::cerr << "-----------------------------------------------"
+    //                 << std::endl;
+    //     }
+    //   }
+    // }
 
     // Velocity Verlet integration
     move_particles(particles, dt, width, height);
