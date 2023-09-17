@@ -151,7 +151,6 @@ double F_LJ(double S, double x) {
 
 class Particle {
   int id;
-  int cell_index;
   vec2 pos, vel, acc, acc_prev, force;
   double mass, mass_inv, rad;
   std::set<Particle *> neighbors_x, neighbors_y, neighbors;
@@ -168,7 +167,6 @@ public:
     mass_inv = 1.0;
     rad = 1.0;
     this->reset_neighbors();
-    this->reset_cell_index();
   }
 
   Particle(const int &id, const vec2 &pos, const vec2 &vel, const double &mass,
@@ -180,8 +178,9 @@ public:
     this->mass_inv = 1.0 / mass;
     this->rad = rad;
     this->reset_neighbors();
-    this->reset_cell_index();
   }
+
+  ~Particle() { this->reset_neighbors(); }
 
   // General getters
   int get_id() const { return this->id; }
@@ -193,7 +192,6 @@ public:
   vec2 get_force() const { return this->force; }
   double get_mass() const { return this->mass; }
   double get_radius() const { return this->rad; }
-  int get_cell_index() const { return this->cell_index; }
   std::set<Particle *> get_neighbors_list() const { return this->neighbors; }
   std::set<Particle *> get_neighbors_x() { return this->neighbors_x; }
   std::set<Particle *> get_neighbors_y() { return this->neighbors_y; }
@@ -289,22 +287,6 @@ public:
     set_intersection(this->neighbors_x.begin(), this->neighbors_x.end(),
                      this->neighbors_y.begin(), this->neighbors_y.end(),
                      std::inserter(this->neighbors, this->neighbors.begin()));
-    // std::vector<int> neighbors_x_ids = {};
-    // for (auto p : this->neighbors_x)
-    //   neighbors_x_ids.push_back(p->get_id());
-    //
-    // std::vector<int> neighbors_y_ids = {};
-    // for (auto p : this->neighbors_y)
-    //   neighbors_y_ids.push_back(p->get_id());
-    //
-    // std::vector<int> neighbors_all_ids = {};
-    // for (auto p : this->neighbors)
-    //   neighbors_all_ids.push_back(p->get_id());
-    //
-    // std::cerr << "(" << this->id << ") neighbors in x = {"
-    //           << join(neighbors_x_ids, ",") << "}, neighbors in y = {"
-    //           << join(neighbors_y_ids, ",") << "}, neighbors total = {"
-    //           << join(neighbors_all_ids, ",") << "}" << std::endl;
   }
 
   std::vector<int> neighbor_ids() {
@@ -314,20 +296,6 @@ public:
     }
     return ids;
   }
-
-  // void remove_self_from_neighbors_list() {
-  //   int index = -1;
-  //   for (auto neighbor : this->neighbors) {
-  //     ++index;
-  //     if (this->id == neighbor->get_id()) {
-  //       break;
-  //     }
-  //   }
-  //   this->neighbors.erase(this->neighbors.begin() + index);
-  // }
-
-  void reset_cell_index() { this->cell_index = -1; }
-  void set_cell_index(int index) { this->cell_index = index; }
 
   // Get particle's info
   void print_data(int print_newline = 0, int print_id = 0,
@@ -344,6 +312,64 @@ public:
       std::cout << std::endl;
     else
       std::cout << " ";
+  }
+};
+
+class ParticleSystem {
+  int num_particles;
+  std::vector<Particle *> particle_list;
+
+public:
+  ParticleSystem() {
+    this->num_particles = 0;
+    this->particle_list.clear();
+  }
+
+  ~ParticleSystem() {
+    for (auto particle : this->particle_list)
+      delete particle;
+  }
+
+  // Particle management
+  void add_particle(Particle *p) { this->particle_list.push_back(p); }
+  void remove_particle() {} // TBW
+  Particle *get_particle(int i) { return this->particle_list[i]; }
+  std::vector<Particle *> get_particle_list() { return this->particle_list; }
+
+  // Dynamics
+  void calc_new_positions(const double &dt) {
+    for (auto &p : this->particle_list) {
+      p->calc_new_pos(dt);
+    }
+  }
+
+  void calc_accelerations() {
+    for (auto &p : this->particle_list) {
+      p->calc_acc();
+    }
+  }
+
+  void calc_new_velocities(const double &dt, const double &width,
+                           const double &height) {
+    for (auto &p : this->particle_list) {
+      p->calc_new_vel(dt);
+      p->check_wall_collision(width, height);
+    }
+  }
+
+  void move_particles(const double &dt, const double &width,
+                      const double &height) {
+    calc_new_positions(dt);
+    calc_accelerations();
+    calc_new_velocities(dt, width, height);
+  }
+
+  // Data managment
+  void append_new_data(std::vector<double> &data) {
+    for (auto particle : this->particle_list) {
+      data.push_back(particle->get_x());
+      data.push_back(particle->get_y());
+    }
   }
 };
 
@@ -384,51 +410,6 @@ void move_particles(std::vector<Particle *> particles, const double &dt,
   calc_new_positions(particles, dt);
   calc_accelerations(particles);
   calc_new_velocities(particles, dt, width, height);
-}
-
-void print_particles_data(const std::vector<Particle *> &particles,
-                          int print_masses = 1, int print_radii = 1,
-                          int print_x = 1, int print_y = 1,
-                          int print_cell_index_1D = 1, int num_cols = 0) {
-  if (print_masses) {
-    std::cout << "# masses:";
-    for (auto p : particles)
-      std::cout << " " << p->get_mass() << " ";
-    std::cout << std::endl;
-  }
-
-  if (print_radii) {
-    std::cout << "# radii:";
-    for (auto p : particles)
-      std::cout << " " << p->get_radius() << " ";
-    std::cout << std::endl;
-  }
-
-  if (print_x) {
-    for (auto p : particles)
-      std::cout << p->get_x() << " ";
-    std::cout << std::endl;
-  }
-
-  if (print_y) {
-    for (auto p : particles)
-      std::cout << p->get_y() << " ";
-    std::cout << std::endl;
-  }
-
-  if (print_cell_index_1D) {
-    for (auto p : particles)
-      std::cout << p->get_cell_index() << " ";
-    std::cout << std::endl;
-  }
-}
-
-void append_new_data(const std::vector<Particle *> particles,
-                     std::vector<double> &data) {
-  for (auto particle : particles) {
-    data.push_back(particle->get_x());
-    data.push_back(particle->get_y());
-  }
 }
 
 void save_data(const std::string &filename, const std::vector<double> box_size,
@@ -484,14 +465,14 @@ int main(int argc, char *argv[]) {
   std::vector<int> nmat_row(num_particles, 0);
 
   // init particles
+  ParticleSystem particle_system;
   double x, y;
-  std::vector<Particle *> particles;
   vec2 pos;
   for (int i = 0; i < num_particles; i++) {
     int done = 0, found_overlap = 0;
     while (!done) {
       pos = vec2(glm::linearRand(0.0, width), glm::linearRand(0.0, height));
-      for (auto particle: particles) {
+      for (auto particle : particle_system.get_particle_list()) {
         found_overlap = 0;
         double dis2 = glm::distance2(particle->get_pos(), pos);
         if (dis2 <= 4.0) {
@@ -502,17 +483,17 @@ int main(int argc, char *argv[]) {
       done = !found_overlap;
     }
     vec2 vel = glm::circularRand(1.0E1);
-    particles.push_back(new Particle(i, pos, vel, 1.0, 1.0));
+    particle_system.add_particle(new Particle(i, pos, vel, 1.0, 1.0));
   }
   // Set special big particle
-  particles[0]->set_vel(.0, .0);
-  particles[0]->set_mass(10.0);
-  particles[0]->set_radius(10.0);
+  particle_system.get_particle(0)->set_vel(.0, .0);
+  particle_system.get_particle(0)->set_mass(10.0);
+  particle_system.get_particle(0)->set_radius(10.0);
 
   // Create mass and radius vectors for saving data
   std::vector<double> masses = {};
   std::vector<double> radii = {};
-  for (auto particle : particles) {
+  for (auto particle : particle_system.get_particle_list()) {
     masses.push_back(particle->get_mass());
     radii.push_back(particle->get_radius());
   }
@@ -520,7 +501,7 @@ int main(int argc, char *argv[]) {
   // Sorted vecs
   std::vector<Particle *> particles_x_pos = {};
   std::vector<Particle *> particles_y_pos = {};
-  for (auto particle : particles) {
+  for (auto particle : particle_system.get_particle_list()) {
     particles_x_pos.push_back(particle);
     particles_y_pos.push_back(particle);
   }
@@ -553,29 +534,30 @@ int main(int argc, char *argv[]) {
               comapreParticleByYPos);
 
     // Create neighbor lists for particles
-    for (auto particle : particles)
+    for (auto particle : particle_system.get_particle_list())
       particle->reset_neighbors();
     find_neighbors(X, FORWARD, particles_x_pos, num_particles);
     find_neighbors(X, BACKWARDS, particles_x_pos, num_particles);
     find_neighbors(Y, FORWARD, particles_y_pos, num_particles);
     find_neighbors(Y, BACKWARDS, particles_y_pos, num_particles);
-    for (auto particle : particles)
+    for (auto particle : particle_system.get_particle_list())
       particle->generate_neighbors_list_by_intersection();
 
     // Interaction!
-    for (auto &particle : particles) {
+    for (auto &particle : particle_system.get_particle_list()) {
       for (auto neighbor : particle->get_neighbors_list()) {
         particle->interact(*neighbor);
       }
     }
 
     // Velocity Verlet integration
-    move_particles(particles, dt, width, height);
+    particle_system.move_particles(dt, width, height);
 
     // Data related
     if (step % skip == 0) {
-      append_new_data(particles, trajectories); // Trajectories
-      for (auto particle : particles) {         // neighbor matrix
+      particle_system.append_new_data(trajectories); // Trajectories
+      for (auto particle :
+           particle_system.get_particle_list()) { // neighbor matrix
         std::fill(nmat_row.begin(), nmat_row.end(), 0);
         for (auto neighbor : particle->get_neighbors_list())
           nmat_row[neighbor->get_id()] = 1;
