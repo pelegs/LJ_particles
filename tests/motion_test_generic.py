@@ -13,6 +13,8 @@ data = np.load(argv[1])
 # Process data
 skip = int(argv[3])
 trajectories = data["trajectories"][::skip, :, :]
+masses = data["masses"]
+radii = data["radii"]
 num_particles = trajectories.shape[1]
 num_frames = trajectories.shape[0]
 width, height = data["box_size"]
@@ -34,11 +36,14 @@ ax.add_patch(Rectangle((0.0, 0.0), width, height, linewidth=4,
 
 colors = cm.rainbow(np.linspace(0, 1, num_particles))
 camera = Camera(plt.figure())
-check_neighbor_ids = [0, 10, 13, 27, 49]
+check_neighbor_ids = [0]
 focused_color = np.array([.0, .0, .0, 1.])
 link_color = np.array([0., .0, 1., 1.])
 for i in check_neighbor_ids:
     colors[i] = focused_color
+
+# set marker sizes
+marker_sizes = np.sqrt(radii)*25
 
 for frame in tqdm(range(num_frames)):
     plt.xlim((0.0, width))
@@ -50,9 +55,9 @@ for frame in tqdm(range(num_frames)):
             p0y = trajectories[frame, idx, 1]
             p1x = trajectories[frame, n_id, 0]
             p1y = trajectories[frame, n_id, 1]
-            plt.plot([p0x, p1x], [p0y, p1y],
+            plt.plot([p0x, p1x], [p0y, p1y], "--",
                      c=link_color, linewidth=0.5)
-    plt.scatter(*trajectories[frame].T, c=colors, s=25)
+    plt.scatter(*trajectories[frame].T, c=colors, s=marker_sizes)
     camera.snap()
 anim = camera.animate(blit=True)
 FFwriter = animation.FFMpegWriter(

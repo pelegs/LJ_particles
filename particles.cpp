@@ -201,12 +201,22 @@ public:
   bool is_neighbor_x(Particle *p) { return in_container(this->neighbors_x, p); }
   bool is_neighbor_y(Particle *p) { return in_container(this->neighbors_y, p); }
 
-  // General getters
+  // General setters
   void set_pos(const double &x, const double &y) {
     vec2 pos = {x, y};
     this->pos = pos;
   }
+  void set_vel(const double &vx, const double &vy) {
+    vec2 vel = {vx, vy};
+    this->vel = vel;
+  }
+  void set_mass(const double &m) {
+    this->mass = m;
+    this->mass_inv = 1.0 / m;
+  }
+  void set_radius(const double &r) { this->rad = r; }
 
+  // Direction between two particles
   vec2 connect(const Particle &p2) { return p2.get_pos() - this->pos; }
   vec2 look_at(const Particle &p2) { return glm::normalize(this->connect(p2)); }
 
@@ -422,14 +432,18 @@ void append_new_data(const std::vector<Particle *> particles,
 }
 
 void save_data(const std::string &filename, const std::vector<double> box_size,
-               unsigned long num_particles, unsigned long num_steps, unsigned long skip,
-               const std::vector<double> trajectories,
+               unsigned long num_particles, unsigned long num_steps,
+               unsigned long skip, const std::vector<double> trajectories,
+               const std::vector<double> masses,
+               const std::vector<double> radii,
                const std::vector<int> neighbors_matrix) {
   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
   cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
-                 {num_steps/skip, num_particles, num_particles}, "a");
+                 {num_steps / skip, num_particles, num_particles}, "a");
   cnpy::npz_save(filename, "trajectories", &trajectories[0],
-                 {num_steps/skip, num_particles, 2}, "a");
+                 {num_steps / skip, num_particles, 2}, "a");
+  cnpy::npz_save(filename, "masses", &masses[0], {num_particles}, "a");
+  cnpy::npz_save(filename, "radii", &radii[0], {num_particles}, "a");
   // in each frame i: data[i, :, :].T <-- note the transpose!
 }
 
@@ -472,10 +486,35 @@ int main(int argc, char *argv[]) {
   // init particles
   double x, y;
   std::vector<Particle *> particles;
+  vec2 pos;
   for (int i = 0; i < num_particles; i++) {
-    vec2 pos(glm::linearRand(0.0, width), glm::linearRand(0.0, height));
+    int done = 0, found_overlap = 0;
+    while (!done) {
+      pos = vec2(glm::linearRand(0.0, width), glm::linearRand(0.0, height));
+      for (auto particle: particles) {
+        found_overlap = 0;
+        double dis2 = glm::distance2(particle->get_pos(), pos);
+        if (dis2 <= 4.0) {
+          found_overlap = 1;
+          break;
+        }
+      }
+      done = !found_overlap;
+    }
     vec2 vel = glm::circularRand(1.0E1);
     particles.push_back(new Particle(i, pos, vel, 1.0, 1.0));
+  }
+  // Set special big particle
+  particles[0]->set_vel(.0, .0);
+  particles[0]->set_mass(10.0);
+  particles[0]->set_radius(10.0);
+
+  // Create mass and radius vectors for saving data
+  std::vector<double> masses = {};
+  std::vector<double> radii = {};
+  for (auto particle : particles) {
+    masses.push_back(particle->get_mass());
+    radii.push_back(particle->get_radius());
   }
 
   // Sorted vecs
@@ -520,34 +559,8 @@ int main(int argc, char *argv[]) {
     find_neighbors(X, BACKWARDS, particles_x_pos, num_particles);
     find_neighbors(Y, FORWARD, particles_y_pos, num_particles);
     find_neighbors(Y, BACKWARDS, particles_y_pos, num_particles);
-    for (auto particle : particles) {
+    for (auto particle : particles)
       particle->generate_neighbors_list_by_intersection();
-      std::fill(nmat_row.begin(), nmat_row.end(), 0);
-      for (auto neighbor : particle->get_neighbors_list())
-        nmat_row[neighbor->get_id()] = 1;
-      neighbors_matrix.insert(neighbors_matrix.end(), nmat_row.begin(),
-                              nmat_row.end());
-    }
-
-    // test
-    // for (auto particle : particles) {
-    //   for (auto neighbor : particle->get_neighbors_list()) {
-    //     if (!neighbor->is_neighbor(particle)) {
-    //       std::cerr << "Frame: " << step << ", particle " <<
-    //       particle->get_id()
-    //                 << " is not in neighbor list of its neighbor "
-    //                 << neighbor->get_id() << std::endl;
-    //       std::cerr << "List of neighbors of particle " << particle->get_id()
-    //                 << ": {" << join(particle->neighbor_ids(), ",") << "}"
-    //                 << std::endl;
-    //       std::cerr << "List of neighbors of particle " << neighbor->get_id()
-    //                 << ": {" << join(neighbor->neighbor_ids(), ",") << "}"
-    //                 << std::endl;
-    //       std::cerr << "-----------------------------------------------"
-    //                 << std::endl;
-    //     }
-    //   }
-    // }
 
     // Interaction!
     for (auto &particle : particles) {
@@ -560,8 +573,16 @@ int main(int argc, char *argv[]) {
     move_particles(particles, dt, width, height);
 
     // Data related
-    if (step % skip == 0)
-      append_new_data(particles, trajectories);
+    if (step % skip == 0) {
+      append_new_data(particles, trajectories); // Trajectories
+      for (auto particle : particles) {         // neighbor matrix
+        std::fill(nmat_row.begin(), nmat_row.end(), 0);
+        for (auto neighbor : particle->get_neighbors_list())
+          nmat_row[neighbor->get_id()] = 1;
+        neighbors_matrix.insert(neighbors_matrix.end(), nmat_row.begin(),
+                                nmat_row.end());
+      }
+    }
 
     // Progress bar update
     progress_perc = (int)((float)step / (float)num_steps * 100);
@@ -574,7 +595,7 @@ int main(int argc, char *argv[]) {
   // Save data
   std::vector<double> box_size = {width, height};
   save_data(filename, box_size, num_particles, num_steps, skip, trajectories,
-            neighbors_matrix);
+            masses, radii, neighbors_matrix);
 
   return 0;
 }
