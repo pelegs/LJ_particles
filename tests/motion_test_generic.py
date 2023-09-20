@@ -13,8 +13,8 @@ data = np.load(argv[1])
 # Process data
 skip = int(argv[3])
 trajectories = data["trajectories"][::skip, :, :]
-masses = data["masses"]
-radii = data["radii"]
+# masses = data["masses"]
+# radii = data["radii"]
 num_particles = trajectories.shape[1]
 num_frames = trajectories.shape[0]
 width, height = data["box_size"]
@@ -43,7 +43,8 @@ camera = Camera(plt.figure())
 #     colors[i] = focused_color
 
 # set marker sizes
-marker_sizes = radii*50
+# marker_sizes = radii*50
+marker_sizes = 50
 
 for frame in tqdm(range(num_frames)):
     plt.xlim((0.0, width))

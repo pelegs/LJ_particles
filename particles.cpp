@@ -47,7 +47,7 @@ const double sqrt_2 = glm::root_two<double>();
 const double one_over_sqrt_2 = 1.0 / sqrt_2;
 
 // Physics-ish constants
-const double R_CUTOFF = 50.0;
+const double R_CUTOFF = 10.0;
 const double GRAV = 1.0E2;
 const double LJ_E = 1.0E6;
 
@@ -144,6 +144,8 @@ double F_LJ(double S, double x) {
   return -1.0 * 24.0 * LJ_E * S_6 * (std::pow(x, 6.0) - 2 * S_6) /
          std::pow(x, 13.0);
 }
+
+double F_HOOK(double K, double x, double x0) { return K * (x - x0); }
 
 /*************************/
 /*        Classes        */
@@ -247,7 +249,7 @@ public:
     return F * dir;
   }
 
-  void add_force(const vec2 &F) { this->force += F; }
+  void add_force(const vec2 &F) { this->force = this->force + F; }
   void reset_force() { this->force = O_; }
 
   void interact(const Particle &p2) {
@@ -315,6 +317,39 @@ public:
   }
 };
 
+class Spring {
+  Particle *p1, *p2;
+  double K, x0;
+
+public:
+  Spring(Particle &p1, Particle &p2, double K, double x0) {
+    this->p1 = &p1;
+    this->p2 = &p2;
+    this->K = K;
+    this->x0 = x0;
+  }
+
+  void get_data() {
+    std::cerr << this->K << " " << this->x0 << " " << this->p1->get_id() << " "
+              << this->p2->get_id() << std::endl;
+  }
+
+  double particles_distance() {
+    return glm::distance(this->p1->get_pos(), this->p2->get_pos());
+  }
+
+  double hook_force(double x) { return this->K * (x - this->x0) * -1.0; }
+
+  void apply_force() {
+    vec2 dr = this->p2->look_at(*this->p1);
+    double x = this->particles_distance();
+    vec2 F12 = -1.0 * dr * this->K * (x - this->x0);
+    vec2 F21 = -1.0 * F12;
+    this->p1->add_force(F12);
+    this->p2->add_force(F21);
+  }
+};
+
 class ParticleSystem {
   int num_particles;
   std::vector<Particle *> particle_list;
@@ -360,6 +395,7 @@ public:
   void move_particles(const double &dt, const double &width,
                       const double &height) {
     calc_new_positions(dt);
+    // interaction
     calc_accelerations();
     calc_new_velocities(dt, width, height);
   }
@@ -426,15 +462,28 @@ void move_particles(std::vector<Particle *> particles, const double &dt,
   calc_new_velocities(particles, dt, width, height);
 }
 
-// void save_data(const std::string &filename, const std::vector<double> box_size,
+void save_data(const std::string &filename, const std::vector<double> box_size,
+               unsigned long num_particles, unsigned long num_steps,
+               unsigned long skip, const std::vector<double> trajectories,
+               const std::vector<double> masses,
+               const std::vector<double> radii) {
+  cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
+  // cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
+  //                {num_steps / skip, num_particles, num_particles}, "a");
+  cnpy::npz_save(filename, "trajectories", &trajectories[0],
+                 {num_steps / skip, num_particles, 2}, "a");
+  cnpy::npz_save(filename, "masses", &masses[0], {num_particles}, "a");
+  cnpy::npz_save(filename, "radii", &radii[0], {num_particles}, "a");
+  // in each frame i: data[i, :, :].T <-- note the transpose!
+}
+
+// void save_data(const std::string &filename, const std::vector<double>
+// box_size,
 //                unsigned long num_particles, unsigned long num_steps,
 //                unsigned long skip, const std::vector<double> trajectories,
 //                const std::vector<double> masses,
-//                const std::vector<double> radii,
-//                const std::vector<int> neighbors_matrix) {
+//                const std::vector<double> radii) {
 //   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
-//   cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
-//                  {num_steps / skip, num_particles, num_particles}, "a");
 //   cnpy::npz_save(filename, "trajectories", &trajectories[0],
 //                  {num_steps / skip, num_particles, 2}, "a");
 //   cnpy::npz_save(filename, "masses", &masses[0], {num_particles}, "a");
@@ -442,18 +491,15 @@ void move_particles(std::vector<Particle *> particles, const double &dt,
 //   // in each frame i: data[i, :, :].T <-- note the transpose!
 // }
 
-void save_data(const std::string &filename, const std::vector<double> box_size,
-               unsigned long num_particles, unsigned long num_steps,
-               unsigned long skip, const std::vector<double> trajectories,
-               const std::vector<double> masses,
-               const std::vector<double> radii) {
-  cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
-  cnpy::npz_save(filename, "trajectories", &trajectories[0],
-                 {num_steps / skip, num_particles, 2}, "a");
-  cnpy::npz_save(filename, "masses", &masses[0], {num_particles}, "a");
-  cnpy::npz_save(filename, "radii", &radii[0], {num_particles}, "a");
-  // in each frame i: data[i, :, :].T <-- note the transpose!
-}
+// void save_data(const std::string &filename, const std::vector<double>
+// box_size,
+//                unsigned long num_particles, unsigned long num_steps,
+//                const std::vector<double> trajectories) {
+//   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
+//   cnpy::npz_save(filename, "trajectories", &trajectories[0],
+//                  {num_steps, num_particles, 2}, "a");
+//   // in each frame i: data[i, :, :].T <-- note the transpose!
+// }
 
 void find_neighbors(const int &axis, const int &dir,
                     const std::vector<Particle *> particle_list,
@@ -494,9 +540,10 @@ int main(int argc, char *argv[]) {
   // init particles
   ParticleSystem particle_system;
   for (int i = 0; i < num_particles; i++) {
-    particle_system.add_particle(new Particle(i, O_, O_, 1.0, 10.0));
+    particle_system.add_particle(new Particle(i, O_, O_, 1.0, 3.0));
   }
-  particle_system.place_particles_in_grid(width, height, 10, 10);
+  particle_system.place_particles_in_grid(width, height, 8, 8);
+  particle_system.get_particle(20)->set_vel(100.0, 150.0);
   // Set special big particle
   // particle_system.get_particle(49)->set_vel(.0, .0);
   // particle_system.get_particle(49)->set_mass(3.0);
@@ -509,6 +556,12 @@ int main(int argc, char *argv[]) {
     masses.push_back(particle->get_mass());
     radii.push_back(particle->get_radius());
   }
+
+  // Create springs?
+  Spring spring1(*particle_system.get_particle(20),
+                *particle_system.get_particle(21), 5.0, 15.0);
+  Spring spring2(*particle_system.get_particle(21),
+                *particle_system.get_particle(22), 5.0, 15.0);
 
   // Sorted vecs
   std::vector<Particle *> particles_x_pos = {};
@@ -561,6 +614,8 @@ int main(int argc, char *argv[]) {
         particle->interact(*neighbor);
       }
     }
+    spring1.apply_force();
+    spring2.apply_force();
 
     // Velocity Verlet integration
     particle_system.move_particles(dt, width, height);
@@ -589,10 +644,41 @@ int main(int argc, char *argv[]) {
 
   // Save data
   std::vector<double> box_size = {width, height};
-  // save_data(filename, box_size, num_particles, num_steps, skip, trajectories,
-  //           masses, radii, neighbors_matrix);
-  save_data(filename, box_size, num_particles, num_steps, skip, trajectories,
-            masses, radii);
+  // save_data(filename, box_size, num_particles, num_steps, skip,
+  trajectories,
+      //           masses, radii, neighbors_matrix);
+      save_data(filename, box_size, num_particles, num_steps, skip,
+                trajectories, masses, radii);
+
+  // double width = atof(argv[1]);
+  // double height = atof(argv[2]);
+  // int num_steps = atoi(argv[3]);
+  // double dt = atof(argv[4]);
+  //
+  // vec2 center(width / 2, height / 2);
+  // vec2 pos1 = center - 15.0 * X_;
+  // vec2 pos2 = center + 15.0 * X_;
+  // ParticleSystem particle_system;
+  // particle_system.add_particle(new Particle(1, pos1, O_, 1.0, 1.0));
+  // particle_system.add_particle(new Particle(2, pos2, O_, 1.0, 1.0));
+  // Spring spring(*particle_system.get_particle(0),
+  //               *particle_system.get_particle(1), 5.0, 15.0);
+  //
+  // std::vector<double> trajectories = {};
+  //
+  // for (int t = 0; t < num_steps; t++) {
+  //   particle_system.calc_new_positions(dt);
+  //   particle_system.get_particle(0)->interact(*particle_system.get_particle(1));
+  //   particle_system.get_particle(1)->interact(*particle_system.get_particle(0));
+  //   spring.apply_force();
+  //   particle_system.calc_accelerations();
+  //   particle_system.calc_new_velocities(dt, width, height);
+  //   particle_system.append_new_data(trajectories); // Trajectories
+  // }
+  //
+  // // Save data
+  // std::vector<double> box_size = {width, height};
+  // save_data("tests/spring1.npz", box_size, 2, num_steps, trajectories);
 
   return 0;
 }
