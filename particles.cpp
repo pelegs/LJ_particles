@@ -371,6 +371,20 @@ public:
       data.push_back(particle->get_y());
     }
   }
+
+  void place_particles_in_grid(const double &width, const double &height,
+                               const int &nx, const int &ny) {
+    int i = 0;
+    int row, col;
+    double dx = width / ((double)nx + 1);
+    double dy = height / ((double)ny + 1);
+    for (auto particle : this->particle_list) {
+      row = i / ny + 1;
+      col = i % ny + 1;
+      particle->set_pos((double)col * dx, (double)row * dy);
+      ++i;
+    }
+  }
 };
 
 /******************************************/
@@ -466,29 +480,14 @@ int main(int argc, char *argv[]) {
 
   // init particles
   ParticleSystem particle_system;
-  double x, y;
-  vec2 pos;
   for (int i = 0; i < num_particles; i++) {
-    int done = 0, found_overlap = 0;
-    while (!done) {
-      pos = vec2(glm::linearRand(0.0, width), glm::linearRand(0.0, height));
-      for (auto particle : particle_system.get_particle_list()) {
-        found_overlap = 0;
-        double dis2 = glm::distance2(particle->get_pos(), pos);
-        if (dis2 <= 4.0) {
-          found_overlap = 1;
-          break;
-        }
-      }
-      done = !found_overlap;
-    }
-    vec2 vel = glm::circularRand(1.0E1);
-    particle_system.add_particle(new Particle(i, pos, vel, 1.0, 1.0));
+    particle_system.add_particle(new Particle(i, O_, O_, 1.0, 1.0));
   }
+  particle_system.place_particles_in_grid(width - 20.0, height - 20.0, 10, 10);
   // Set special big particle
-  particle_system.get_particle(0)->set_vel(.0, .0);
-  particle_system.get_particle(0)->set_mass(10.0);
-  particle_system.get_particle(0)->set_radius(10.0);
+  // particle_system.get_particle(0)->set_vel(.0, .0);
+  // particle_system.get_particle(0)->set_mass(5.0);
+  // particle_system.get_particle(0)->set_radius(25.0);
 
   // Create mass and radius vectors for saving data
   std::vector<double> masses = {};
@@ -525,7 +524,7 @@ int main(int argc, char *argv[]) {
   std::vector<double> x_pos = {};
   std::vector<double> y_pos = {};
 
-  // Testing neighor finding strategy
+  // Neighor finding
   for (int step = 0; step < num_steps; step++) {
     // Sort x- and y-position vectors
     std::sort(particles_x_pos.begin(), particles_x_pos.end(),
@@ -554,6 +553,7 @@ int main(int argc, char *argv[]) {
     particle_system.move_particles(dt, width, height);
 
     // Data related
+    // (TODO: should be moved to ParticleSystem)
     if (step % skip == 0) {
       particle_system.append_new_data(trajectories); // Trajectories
       for (auto particle :
