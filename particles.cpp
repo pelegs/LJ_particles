@@ -47,7 +47,7 @@ const double sqrt_2 = glm::root_two<double>();
 const double one_over_sqrt_2 = 1.0 / sqrt_2;
 
 // Physics-ish constants
-const double R_CUTOFF = 30.0;
+const double R_CUTOFF = 50.0;
 const double GRAV = 1.0E2;
 const double LJ_E = 1.0E6;
 
@@ -426,15 +426,28 @@ void move_particles(std::vector<Particle *> particles, const double &dt,
   calc_new_velocities(particles, dt, width, height);
 }
 
+// void save_data(const std::string &filename, const std::vector<double> box_size,
+//                unsigned long num_particles, unsigned long num_steps,
+//                unsigned long skip, const std::vector<double> trajectories,
+//                const std::vector<double> masses,
+//                const std::vector<double> radii,
+//                const std::vector<int> neighbors_matrix) {
+//   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
+//   cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
+//                  {num_steps / skip, num_particles, num_particles}, "a");
+//   cnpy::npz_save(filename, "trajectories", &trajectories[0],
+//                  {num_steps / skip, num_particles, 2}, "a");
+//   cnpy::npz_save(filename, "masses", &masses[0], {num_particles}, "a");
+//   cnpy::npz_save(filename, "radii", &radii[0], {num_particles}, "a");
+//   // in each frame i: data[i, :, :].T <-- note the transpose!
+// }
+
 void save_data(const std::string &filename, const std::vector<double> box_size,
                unsigned long num_particles, unsigned long num_steps,
                unsigned long skip, const std::vector<double> trajectories,
                const std::vector<double> masses,
-               const std::vector<double> radii,
-               const std::vector<int> neighbors_matrix) {
+               const std::vector<double> radii) {
   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
-  cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
-                 {num_steps / skip, num_particles, num_particles}, "a");
   cnpy::npz_save(filename, "trajectories", &trajectories[0],
                  {num_steps / skip, num_particles, 2}, "a");
   cnpy::npz_save(filename, "masses", &masses[0], {num_particles}, "a");
@@ -481,13 +494,13 @@ int main(int argc, char *argv[]) {
   // init particles
   ParticleSystem particle_system;
   for (int i = 0; i < num_particles; i++) {
-    particle_system.add_particle(new Particle(i, O_, O_, 1.0, 1.0));
+    particle_system.add_particle(new Particle(i, O_, O_, 1.0, 10.0));
   }
-  particle_system.place_particles_in_grid(width - 20.0, height - 20.0, 10, 10);
+  particle_system.place_particles_in_grid(width, height, 10, 10);
   // Set special big particle
-  // particle_system.get_particle(0)->set_vel(.0, .0);
-  // particle_system.get_particle(0)->set_mass(5.0);
-  // particle_system.get_particle(0)->set_radius(25.0);
+  // particle_system.get_particle(49)->set_vel(.0, .0);
+  // particle_system.get_particle(49)->set_mass(3.0);
+  // particle_system.get_particle(49)->set_radius(5.0);
 
   // Create mass and radius vectors for saving data
   std::vector<double> masses = {};
@@ -576,8 +589,10 @@ int main(int argc, char *argv[]) {
 
   // Save data
   std::vector<double> box_size = {width, height};
+  // save_data(filename, box_size, num_particles, num_steps, skip, trajectories,
+  //           masses, radii, neighbors_matrix);
   save_data(filename, box_size, num_particles, num_steps, skip, trajectories,
-            masses, radii, neighbors_matrix);
+            masses, radii);
 
   return 0;
 }

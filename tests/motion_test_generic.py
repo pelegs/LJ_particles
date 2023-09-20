@@ -18,7 +18,7 @@ radii = data["radii"]
 num_particles = trajectories.shape[1]
 num_frames = trajectories.shape[0]
 width, height = data["box_size"]
-neighbors_matrix = data["neighbors_matrix"][::skip, :, :]
+# neighbors_matrix = data["neighbors_matrix"][::skip, :, :]
 # for i, frame in enumerate(neighbors_matrix):
 #     if not np.array_equal(frame, frame.T):
 #         print(i)
@@ -36,27 +36,27 @@ ax.add_patch(Rectangle((0.0, 0.0), width, height, linewidth=4,
 
 colors = cm.rainbow(np.linspace(0, 1, num_particles))
 camera = Camera(plt.figure())
-check_neighbor_ids = [0]
-focused_color = np.array([.0, .0, .0, 1.])
-link_color = np.array([0., .0, 1., 1.])
-for i in check_neighbor_ids:
-    colors[i] = focused_color
+# check_neighbor_ids = [49]
+# focused_color = np.array([.0, .0, .0, 1.])
+# link_color = np.array([0., .0, 1., 1.])
+# for i in check_neighbor_ids:
+#     colors[i] = focused_color
 
 # set marker sizes
-marker_sizes = np.sqrt(radii)*25
+marker_sizes = radii*50
 
 for frame in tqdm(range(num_frames)):
     plt.xlim((0.0, width))
     plt.ylim((0.0, height))
-    for idx in check_neighbor_ids:
-        neighbor_ids = np.where(neighbors_matrix[frame].T[idx] > 0)[0]
-        for n_id in neighbor_ids:
-            p0x = trajectories[frame, idx, 0]
-            p0y = trajectories[frame, idx, 1]
-            p1x = trajectories[frame, n_id, 0]
-            p1y = trajectories[frame, n_id, 1]
-            plt.plot([p0x, p1x], [p0y, p1y], "--",
-                     c=link_color, linewidth=0.5)
+    # for idx in check_neighbor_ids:
+        # neighbor_ids = np.where(neighbors_matrix[frame].T[idx] > 0)[0]
+        # for n_id in neighbor_ids:
+        #     p0x = trajectories[frame, idx, 0]
+        #     p0y = trajectories[frame, idx, 1]
+        #     p1x = trajectories[frame, n_id, 0]
+        #     p1y = trajectories[frame, n_id, 1]
+        #     plt.plot([p0x, p1x], [p0y, p1y], "--",
+        #              c=link_color, linewidth=0.5)
     plt.scatter(*trajectories[frame].T, c=colors, s=marker_sizes)
     camera.snap()
 anim = camera.animate(blit=True)
