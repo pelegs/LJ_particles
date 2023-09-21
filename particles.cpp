@@ -145,7 +145,7 @@ double F_LJ(double S, double x) {
          std::pow(x, 13.0);
 }
 
-double F_HOOK(double K, double x, double x0) { return K * (x - x0); }
+double F_HOOK(double K, double x, double x0) { return -1.0 * K * (x - x0); }
 
 /*************************/
 /*        Classes        */
@@ -319,18 +319,21 @@ public:
 
 class Spring {
   Particle *p1, *p2;
-  double K, x0;
+  double K, L;
 
 public:
-  Spring(Particle &p1, Particle &p2, double K, double x0) {
+  Spring(Particle &p1, Particle &p2, double K, double L) {
     this->p1 = &p1;
     this->p2 = &p2;
     this->K = K;
-    this->x0 = x0;
+    if (L == -1.0)
+      this->L = glm::distance(p1.get_pos(), p2.get_pos());
+    else
+      this->L = L;
   }
 
   void get_data() {
-    std::cerr << this->K << " " << this->x0 << " " << this->p1->get_id() << " "
+    std::cerr << this->K << " " << this->L << " " << this->p1->get_id() << " "
               << this->p2->get_id() << std::endl;
   }
 
@@ -338,12 +341,12 @@ public:
     return glm::distance(this->p1->get_pos(), this->p2->get_pos());
   }
 
-  double hook_force(double x) { return this->K * (x - this->x0) * -1.0; }
+  double hook_force(double x) { return this->K * (x - this->L) * -1.0; }
 
   void apply_force() {
     vec2 dr = this->p2->look_at(*this->p1);
     double x = this->particles_distance();
-    vec2 F12 = -1.0 * dr * this->K * (x - this->x0);
+    vec2 F12 = F_HOOK(this->K, x, this->L) * dr;
     vec2 F21 = -1.0 * F12;
     this->p1->add_force(F12);
     this->p2->add_force(F21);
@@ -558,10 +561,19 @@ int main(int argc, char *argv[]) {
   }
 
   // Create springs?
-  Spring spring1(*particle_system.get_particle(20),
-                *particle_system.get_particle(21), 5.0, 15.0);
-  Spring spring2(*particle_system.get_particle(21),
-                *particle_system.get_particle(22), 5.0, 15.0);
+  int bounded_indices[4] = {20, 21, 28, 29};
+  std::vector<Spring *> springs = {};
+  for (int id1 : bounded_indices)
+    for (int id2 : bounded_indices)
+      if (id1 != id2) {
+        springs.push_back(new Spring(*particle_system.get_particle(id1),
+                                     *particle_system.get_particle(id2), 30.0,
+                                     -1.0));
+      }
+
+  // springs.push_back(new Spring(*particle_system.get_particle(id),
+  //                              *particle_system.get_particle(21), 50.0,
+  //                              -1.0));
 
   // Sorted vecs
   std::vector<Particle *> particles_x_pos = {};
@@ -614,8 +626,8 @@ int main(int argc, char *argv[]) {
         particle->interact(*neighbor);
       }
     }
-    spring1.apply_force();
-    spring2.apply_force();
+    for (auto spring: springs)
+      spring->apply_force();
 
     // Velocity Verlet integration
     particle_system.move_particles(dt, width, height);
