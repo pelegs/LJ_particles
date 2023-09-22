@@ -4,7 +4,6 @@
 #include <cmath>
 #include <glm/ext/matrix_transform.hpp>
 #include <indicators/progress_bar.hpp>
-// #include <indicators/cursor_control.hpp>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -14,6 +13,9 @@
 #include <random>
 #include <set>
 #include <vector>
+
+// Own lib
+#include "lib/physics.hpp"
 
 // GLM-related
 #define GLM_ENABLE_EXPERIMENTAL
@@ -45,11 +47,6 @@ const double quarter_pi = half_pi / 2.0;
 const double sixth_pi = third_pi / 2.0;
 const double sqrt_2 = glm::root_two<double>();
 const double one_over_sqrt_2 = 1.0 / sqrt_2;
-
-// Physics-ish constants
-const double R_CUTOFF = 10.0;
-const double GRAV = 1.0E2;
-const double LJ_E = 1.0E6;
 
 // Vector and matrix constants
 const vec2 Zero2 = {.0, .0};
@@ -124,28 +121,6 @@ bool in_container(const container &cont, const type &a) {
       return 1;
   return 0;
 }
-
-/***********************************/
-/*        Physics functions        */
-/***********************************/
-
-double distance1D(const double &x, const double &y) { return abs(x - y); }
-
-double U_LJ(double E, double S, double x) {
-  // Lennard-Jones potential
-  double S_x_6 = std::pow(S / x, 6.0);
-  double S_x_12 = std::pow(S_x_6, 2.0);
-  return 4.0 * E * (S_x_12 - S_x_6);
-}
-
-double F_LJ(double S, double x) {
-  // Lennard-Jones force
-  double S_6 = std::pow(S, 6.0);
-  return -1.0 * 24.0 * LJ_E * S_6 * (std::pow(x, 6.0) - 2 * S_6) /
-         std::pow(x, 13.0);
-}
-
-double F_HOOK(double K, double x, double x0) { return -1.0 * K * (x - x0); }
 
 /*************************/
 /*        Classes        */
@@ -523,6 +498,7 @@ void find_neighbors(const int &axis, const int &dir,
 /**********************/
 
 int main(int argc, char *argv[]) {
+  std::cout << R_CUTOFF << std::endl;
   // randomness!
   srand(time(NULL));
 
@@ -661,36 +637,6 @@ int main(int argc, char *argv[]) {
       //           masses, radii, neighbors_matrix);
       save_data(filename, box_size, num_particles, num_steps, skip,
                 trajectories, masses, radii);
-
-  // double width = atof(argv[1]);
-  // double height = atof(argv[2]);
-  // int num_steps = atoi(argv[3]);
-  // double dt = atof(argv[4]);
-  //
-  // vec2 center(width / 2, height / 2);
-  // vec2 pos1 = center - 15.0 * X_;
-  // vec2 pos2 = center + 15.0 * X_;
-  // ParticleSystem particle_system;
-  // particle_system.add_particle(new Particle(1, pos1, O_, 1.0, 1.0));
-  // particle_system.add_particle(new Particle(2, pos2, O_, 1.0, 1.0));
-  // Spring spring(*particle_system.get_particle(0),
-  //               *particle_system.get_particle(1), 5.0, 15.0);
-  //
-  // std::vector<double> trajectories = {};
-  //
-  // for (int t = 0; t < num_steps; t++) {
-  //   particle_system.calc_new_positions(dt);
-  //   particle_system.get_particle(0)->interact(*particle_system.get_particle(1));
-  //   particle_system.get_particle(1)->interact(*particle_system.get_particle(0));
-  //   spring.apply_force();
-  //   particle_system.calc_accelerations();
-  //   particle_system.calc_new_velocities(dt, width, height);
-  //   particle_system.append_new_data(trajectories); // Trajectories
-  // }
-  //
-  // // Save data
-  // std::vector<double> box_size = {width, height};
-  // save_data("tests/spring1.npz", box_size, 2, num_steps, trajectories);
 
   return 0;
 }

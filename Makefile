@@ -1,10 +1,16 @@
 COMPILER=g++
 LDFLAGS=-lcnpy -lz
 STD=c++11
-NAME=particles
+MAIN=particles
+LIBFOLDER=lib
 
-all:
-	$(COMPILER) $(NAME).cpp -o $(NAME) $(LDFLAGS) --std=$(STD)
+physics:
+	rm $(LIBFOLDER)/physics.o
+	$(COMPILER) -c $(LIBFOLDER)/physics.cpp -o $(LIBFOLDER)/physics.o --std=$(STD)
+	ar rvs $(LIBFOLDER)/physics.a $(LIBFOLDER)/physics.o
+
+main:
+	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LIBFOLDER)/physics.a $(LDFLAGS) --std=$(STD)
 
 debug:
-	$(COMPILER) $(NAME).cpp -o $(NAME) $(LDFLAGS) --std=$(STD) -g
+	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LDFLAGS) --std=$(STD) -g
