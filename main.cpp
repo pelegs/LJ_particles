@@ -2,10 +2,7 @@
 #include <cassert>
 #include <glm/ext/matrix_transform.hpp>
 #include <indicators/progress_bar.hpp>
-#include <iostream>
 #include <iterator>
-#include <memory>
-#include <ostream>
 #include <random>
 #include <set>
 #include <vector>
@@ -13,6 +10,7 @@
 // Own lib
 #include "lib/maths.hpp"
 #include "lib/physics.hpp"
+#include "lib/otherfuncs.hpp"
 
 // GLM-related
 #define GLM_ENABLE_EXPERIMENTAL
@@ -20,31 +18,6 @@
 #include <glm/glm.hpp>
 #define assertm(exp, msg)                                                      \
   assert(((void)msg, exp)) // use (void) to silence unused warnings
-
-// Functions
-template <typename Range, typename Value = typename Range::value_type>
-std::string join(Range const &elements, const char *const delimiter) {
-  std::ostringstream os;
-  auto b = begin(elements), e = end(elements);
-
-  if (b != e) {
-    std::copy(b, prev(e), std::ostream_iterator<Value>(os, delimiter));
-    b = prev(e);
-  }
-  if (b != e) {
-    os << *b;
-  }
-
-  return os.str();
-}
-
-template <typename container, typename type>
-bool in_container(const container &cont, const type &a) {
-  for (auto vec_element : cont)
-    if (vec_element == a)
-      return 1;
-  return 0;
-}
 
 /*************************/
 /*        Classes        */
@@ -335,33 +308,6 @@ bool comapreParticleByXPos(const Particle *lhs, const Particle *rhs) {
 
 bool comapreParticleByYPos(const Particle *lhs, const Particle *rhs) {
   return lhs->get_y() < rhs->get_y();
-}
-
-void calc_new_positions(std::vector<Particle *> particles, const double &dt) {
-  for (auto &p : particles) {
-    p->calc_new_pos(dt);
-  }
-}
-
-void calc_accelerations(std::vector<Particle *> particles) {
-  for (auto &p : particles) {
-    p->calc_acc();
-  }
-}
-
-void calc_new_velocities(std::vector<Particle *> particles, const double &dt,
-                         const double &width, const double &height) {
-  for (auto &p : particles) {
-    p->calc_new_vel(dt);
-    p->check_wall_collision(width, height);
-  }
-}
-
-void move_particles(std::vector<Particle *> particles, const double &dt,
-                    const double &width, const double &height) {
-  calc_new_positions(particles, dt);
-  calc_accelerations(particles);
-  calc_new_velocities(particles, dt, width, height);
 }
 
 void save_data(const std::string &filename, const std::vector<double> box_size,

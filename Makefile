@@ -10,7 +10,10 @@ maths:
 physics: maths
 	$(COMPILER) -c $(LIBFOLDER)/physics.cpp -o $(LIBFOLDER)/physics.o --std=$(STD)
 
-main: physics
+otherfuncs:
+	$(COMPILER) -c $(LIBFOLDER)/otherfuncs.cpp -o $(LIBFOLDER)/otherfuncs.o --std=$(STD)
+
+main: physics otherfuncs
 	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LDFLAGS) --std=$(STD)
 
 debug:
