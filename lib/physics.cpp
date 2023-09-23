@@ -1,13 +1,6 @@
-#include <algorithm>
-#include <cassert>
-#include <cmath>
 #include <glm/ext/matrix_transform.hpp>
-#include <iostream>
-
-// Physics-ish constants
-const double R_CUTOFF = 5.0; // Cutoff distance for neighbor finding
-const double GRAV = 1.0E2; // Gravitational constant
-const double LJ_E = 1.0E6; // Lennard-Jones energy
+#include "maths.hpp"
+#include "physics.hpp"
 
 // Functions
 double distance1D(const double &x, const double &y) {

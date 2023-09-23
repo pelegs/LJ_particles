@@ -1,13 +1,9 @@
 #include "cnpy.h"
-#include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <glm/ext/matrix_transform.hpp>
 #include <indicators/progress_bar.hpp>
 #include <iostream>
 #include <iterator>
-#include <limits>
-#include <math.h>
 #include <memory>
 #include <ostream>
 #include <random>
@@ -15,6 +11,7 @@
 #include <vector>
 
 // Own lib
+#include "lib/maths.hpp"
 #include "lib/physics.hpp"
 
 // GLM-related
@@ -24,80 +21,7 @@
 #define assertm(exp, msg)                                                      \
   assert(((void)msg, exp)) // use (void) to silence unused warnings
 
-/***********************/
-/*        Types        */
-/***********************/
-
-typedef glm::vec<2, double> vec2;
-typedef glm::mat<2, 2, double> mat22;
-typedef std::vector<std::vector<int>> int_mat;
-
-/***************************/
-/*        Constants        */
-/***************************/
-
-// General constants
-const double PERCISION = 1.0E-7;
-const double inf = std::numeric_limits<double>::infinity();
-const double pi = glm::pi<double>();
-const double two_pi = 2.0 * pi;
-const double half_pi = glm::half_pi<double>();
-const double third_pi = pi / 3.0;
-const double quarter_pi = half_pi / 2.0;
-const double sixth_pi = third_pi / 2.0;
-const double sqrt_2 = glm::root_two<double>();
-const double one_over_sqrt_2 = 1.0 / sqrt_2;
-
-// Vector and matrix constants
-const vec2 Zero2 = {.0, .0};
-const vec2 X_ = {1.0, .0};
-const vec2 Y_ = {.0, 1.0};
-const vec2 O_ = {.0, .0};
-const mat22 I2 = mat22(1.0);
-
-// Row-columns related
-const int ROW = 0;
-const int COL = 1;
-const int X = 0;
-const int Y = 1;
-const int FORWARD = 1;
-const int BACKWARDS = -1;
-
-/***********************************/
-/*        General functions        */
-/***********************************/
-
-template <typename T> std::vector<T> arange(T start, T stop, T step = 1) {
-  // Equivalent to numpy's arange function
-  std::vector<T> values;
-  for (T value = start; value < stop; value += step)
-    values.push_back(value);
-  return values;
-}
-
-template <typename T>
-std::vector<double> linspace(T start_in, T end_in, int num_in) {
-  // Equivalent to numpy's linspace function
-  std::vector<double> linspaced;
-  double start = static_cast<double>(start_in);
-  double end = static_cast<double>(end_in);
-  double num = static_cast<double>(num_in);
-  if (num == 0) {
-    return linspaced;
-  }
-  if (num == 1) {
-    linspaced.push_back(start);
-    return linspaced;
-  }
-  double delta = (end - start) / (num - 1);
-  for (int i = 0; i < num - 1; ++i) {
-    linspaced.push_back(start + delta * i);
-  }
-  linspaced.push_back(end); // I want to ensure that start and end
-                            // are exactly the same as the input
-  return linspaced;
-}
-
+// Functions
 template <typename Range, typename Value = typename Range::value_type>
 std::string join(Range const &elements, const char *const delimiter) {
   std::ostringstream os;
