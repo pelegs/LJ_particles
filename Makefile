@@ -13,7 +13,10 @@ physics: maths
 otherfuncs:
 	$(COMPILER) -c $(LIBFOLDER)/otherfuncs.cpp -o $(LIBFOLDER)/otherfuncs.o --std=$(STD)
 
-main: physics otherfuncs
+particles: physics otherfuncs
+	$(COMPILER) -c $(LIBFOLDER)/particles.cpp -o $(LIBFOLDER)/particles.o --std=$(STD)
+
+main: physics otherfuncs particles
 	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LDFLAGS) --std=$(STD)
 
 debug:
