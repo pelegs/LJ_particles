@@ -78,15 +78,6 @@ vec2 Particle::look_at(const Particle &p2) {
 }
 
 // Checkers
-bool Particle::is_neighbor(Particle *p) {
-  return in_container(this->neighbors, p);
-}
-bool Particle::is_neighbor_x(Particle *p) {
-  return in_container(this->neighbors_x, p);
-}
-bool Particle::is_neighbor_y(Particle *p) {
-  return in_container(this->neighbors_y, p);
-}
 void Particle::check_wall_collision(const double &width, const double &height) {
   if (pos[X] < this->rad || std::abs(pos[X] - this->rad) > width) {
     this->vel[X] *= -1;

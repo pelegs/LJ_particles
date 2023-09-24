@@ -4,13 +4,14 @@
 #include <indicators/progress_bar.hpp>
 #include <iterator>
 #include <random>
-#include <set>
-#include <vector>
 
 // Own lib
 #include "lib/maths.hpp"
-#include "lib/otherfuncs.hpp"
 #include "lib/physics.hpp"
+#include "lib/otherfuncs.hpp"
+#include "lib/particles.hpp"
+#include "lib/particle_system.hpp"
+#include "lib/spring.hpp"
 
 // GLM-related
 #define GLM_ENABLE_EXPERIMENTAL
@@ -18,285 +19,6 @@
 #include <glm/glm.hpp>
 #define assertm(exp, msg)                                                      \
   assert(((void)msg, exp)) // use (void) to silence unused warnings
-
-/*************************/
-/*        Classes        */
-/*************************/
-
-class Particle {
-  int id;
-  vec2 pos, vel, acc, acc_prev, force;
-  double mass, mass_inv, rad;
-  std::set<Particle *> neighbors_x, neighbors_y, neighbors;
-
-public:
-  Particle() {
-    id = 0;
-    pos = O_;
-    vel = O_;
-    acc = O_;
-    acc_prev = O_;
-    force = O_;
-    mass = 1.0;
-    mass_inv = 1.0;
-    rad = 1.0;
-    this->reset_neighbors();
-  }
-
-  Particle(const int &id, const vec2 &pos, const vec2 &vel, const double &mass,
-           const double &rad) {
-    this->id = id;
-    this->pos = pos;
-    this->vel = vel;
-    this->mass = mass;
-    this->mass_inv = 1.0 / mass;
-    this->rad = rad;
-    this->reset_neighbors();
-  }
-
-  ~Particle() { this->reset_neighbors(); }
-
-  // General getters
-  int get_id() const { return this->id; }
-  vec2 get_pos() const { return this->pos; }
-  double get_x() const { return this->pos[0]; }
-  double get_y() const { return this->pos[1]; }
-  vec2 get_acc_prev() const { return this->acc_prev; }
-  vec2 get_acc() const { return this->acc; }
-  vec2 get_force() const { return this->force; }
-  double get_mass() const { return this->mass; }
-  double get_radius() const { return this->rad; }
-  std::set<Particle *> get_neighbors_list() const { return this->neighbors; }
-  std::set<Particle *> get_neighbors_x() { return this->neighbors_x; }
-  std::set<Particle *> get_neighbors_y() { return this->neighbors_y; }
-  bool is_neighbor(Particle *p) { return in_container(this->neighbors, p); }
-  bool is_neighbor_x(Particle *p) { return in_container(this->neighbors_x, p); }
-  bool is_neighbor_y(Particle *p) { return in_container(this->neighbors_y, p); }
-
-  // General setters
-  void set_pos(const double &x, const double &y) {
-    vec2 pos = {x, y};
-    this->pos = pos;
-  }
-  void set_vel(const double &vx, const double &vy) {
-    vec2 vel = {vx, vy};
-    this->vel = vel;
-  }
-  void set_mass(const double &m) {
-    this->mass = m;
-    this->mass_inv = 1.0 / m;
-  }
-  void set_radius(const double &r) { this->rad = r; }
-
-  // Direction between two particles
-  vec2 connect(const Particle &p2) { return p2.get_pos() - this->pos; }
-  vec2 look_at(const Particle &p2) { return glm::normalize(this->connect(p2)); }
-
-  // Checking for borders
-  void check_wall_collision(const double &width, const double &height) {
-    if (pos[X] < this->rad || std::abs(pos[X] - this->rad) > width) {
-      this->vel[X] *= -1;
-    }
-    if (pos[Y] < this->rad || std::abs(pos[Y] - this->rad) > height) {
-      this->vel[Y] *= -1;
-    }
-  }
-
-  // Force-related stuff
-  vec2 LJ_force(const Particle &p2) {
-    vec2 dir = this->connect(p2);
-    double distance = glm::length(dir);
-    dir = glm::normalize(dir);
-    double F = F_LJ(p2.rad, distance);
-    return F * dir;
-  }
-
-  vec2 gravity_force(const Particle &p2) {
-    vec2 dir = this->connect(p2);
-    double distance = glm::length(dir);
-    dir = glm::normalize(dir);
-    if (distance < p2.get_radius())
-      dir *= -1.0;
-    double F = GRAV * p2.get_mass() * this->mass / std::pow(distance, 2.0);
-    return F * dir;
-  }
-
-  void add_force(const vec2 &F) { this->force = this->force + F; }
-  void reset_force() { this->force = O_; }
-
-  void interact(const Particle &p2) {
-    this->add_force(this->LJ_force(p2));
-    // this->add_force(this->gravity_force(p2));
-  }
-
-  // Velocity Verlet?..
-  void calc_new_pos(const double &dt) {
-    this->pos += this->vel * dt + 0.5 * this->acc * dt * dt;
-  }
-  void calc_acc() {
-    this->acc_prev = this->acc;
-    this->acc = this->force * this->mass_inv;
-    this->reset_force();
-  }
-  void calc_new_vel(const double &dt) {
-    vel += 0.5 * (this->acc_prev + this->acc) * dt;
-  }
-
-  // Neighbors related
-  void reset_neighbors() {
-    this->neighbors_x.clear();
-    this->neighbors_y.clear();
-    this->neighbors.clear();
-  }
-
-  void add_neighbor(int axis, Particle *neighbor) {
-    if (axis == X)
-      this->neighbors_x.insert(neighbor);
-    if (axis == Y)
-      this->neighbors_y.insert(neighbor);
-  }
-
-  void generate_neighbors_list_by_intersection() {
-    this->neighbors.clear();
-    set_intersection(this->neighbors_x.begin(), this->neighbors_x.end(),
-                     this->neighbors_y.begin(), this->neighbors_y.end(),
-                     std::inserter(this->neighbors, this->neighbors.begin()));
-  }
-
-  std::vector<int> neighbor_ids() {
-    std::vector<int> ids = {};
-    for (auto neighbor : this->neighbors) {
-      ids.push_back(neighbor->get_id());
-    }
-    return ids;
-  }
-
-  // Get particle's info
-  void print_data(int print_newline = 0, int print_id = 0,
-                  int print_neighbor_ids = 0) const {
-    if (print_id)
-      std::cout << this->id << ": ";
-    std::cout << this->pos[0] << " " << this->pos[1];
-    if (print_neighbor_ids) {
-      std::cout << "[";
-      for (auto neighbor : this->neighbors)
-        std::cout << neighbor->get_id() << " ";
-    }
-    if (print_newline)
-      std::cout << std::endl;
-    else
-      std::cout << " ";
-  }
-};
-
-class Spring {
-  Particle *p1, *p2;
-  double K, L;
-
-public:
-  Spring(Particle &p1, Particle &p2, double K, double L) {
-    this->p1 = &p1;
-    this->p2 = &p2;
-    this->K = K;
-    if (L == -1.0)
-      this->L = glm::distance(p1.get_pos(), p2.get_pos());
-    else
-      this->L = L;
-  }
-
-  void get_data() {
-    std::cerr << this->K << " " << this->L << " " << this->p1->get_id() << " "
-              << this->p2->get_id() << std::endl;
-  }
-
-  double particles_distance() {
-    return glm::distance(this->p1->get_pos(), this->p2->get_pos());
-  }
-
-  double hook_force(double x) { return this->K * (x - this->L) * -1.0; }
-
-  void apply_force() {
-    vec2 dr = this->p2->look_at(*this->p1);
-    double x = this->particles_distance();
-    vec2 F12 = F_HOOK(this->K, x, this->L) * dr;
-    vec2 F21 = -1.0 * F12;
-    this->p1->add_force(F12);
-    this->p2->add_force(F21);
-  }
-};
-
-class ParticleSystem {
-  int num_particles;
-  std::vector<Particle *> particle_list;
-
-public:
-  ParticleSystem() {
-    this->num_particles = 0;
-    this->particle_list.clear();
-  }
-
-  ~ParticleSystem() {
-    for (auto particle : this->particle_list)
-      delete particle;
-  }
-
-  // Particle management
-  void add_particle(Particle *p) { this->particle_list.push_back(p); }
-  void remove_particle() {} // TBW
-  Particle *get_particle(int i) { return this->particle_list[i]; }
-  std::vector<Particle *> get_particle_list() { return this->particle_list; }
-
-  // Dynamics
-  void calc_new_positions(const double &dt) {
-    for (auto &p : this->particle_list) {
-      p->calc_new_pos(dt);
-    }
-  }
-
-  void calc_accelerations() {
-    for (auto &p : this->particle_list) {
-      p->calc_acc();
-    }
-  }
-
-  void calc_new_velocities(const double &dt, const double &width,
-                           const double &height) {
-    for (auto &p : this->particle_list) {
-      p->calc_new_vel(dt);
-      p->check_wall_collision(width, height);
-    }
-  }
-
-  void move_particles(const double &dt, const double &width,
-                      const double &height) {
-    calc_new_positions(dt);
-    // interaction
-    calc_accelerations();
-    calc_new_velocities(dt, width, height);
-  }
-
-  // Data managment
-  void append_new_data(std::vector<double> &data) {
-    for (auto particle : this->particle_list) {
-      data.push_back(particle->get_x());
-      data.push_back(particle->get_y());
-    }
-  }
-
-  void place_particles_in_grid(const double &width, const double &height,
-                               const int &nx, const int &ny) {
-    int i = 0;
-    int row, col;
-    double dx = width / ((double)nx + 1);
-    double dy = height / ((double)ny + 1);
-    for (auto particle : this->particle_list) {
-      row = i / ny + 1;
-      col = i % ny + 1;
-      particle->set_pos((double)col * dx, (double)row * dy);
-      ++i;
-    }
-  }
-};
 
 /******************************************/
 /*        Class-relevant functions        */
@@ -324,30 +46,6 @@ void save_data(const std::string &filename, const std::vector<double> box_size,
   cnpy::npz_save(filename, "radii", &radii[0], {num_particles}, "a");
   // in each frame i: data[i, :, :].T <-- note the transpose!
 }
-
-// void save_data(const std::string &filename, const std::vector<double>
-// box_size,
-//                unsigned long num_particles, unsigned long num_steps,
-//                unsigned long skip, const std::vector<double> trajectories,
-//                const std::vector<double> masses,
-//                const std::vector<double> radii) {
-//   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
-//   cnpy::npz_save(filename, "trajectories", &trajectories[0],
-//                  {num_steps / skip, num_particles, 2}, "a");
-//   cnpy::npz_save(filename, "masses", &masses[0], {num_particles}, "a");
-//   cnpy::npz_save(filename, "radii", &radii[0], {num_particles}, "a");
-//   // in each frame i: data[i, :, :].T <-- note the transpose!
-// }
-
-// void save_data(const std::string &filename, const std::vector<double>
-// box_size,
-//                unsigned long num_particles, unsigned long num_steps,
-//                const std::vector<double> trajectories) {
-//   cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
-//   cnpy::npz_save(filename, "trajectories", &trajectories[0],
-//                  {num_steps, num_particles, 2}, "a");
-//   // in each frame i: data[i, :, :].T <-- note the transpose!
-// }
 
 void find_neighbors(const int &axis, const int &dir,
                     const std::vector<Particle *> particle_list,
@@ -391,7 +89,6 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < num_particles; i++) {
     particle_system.add_particle(new Particle(i, O_, O_, 1.0, 3.0));
   }
-  particle_system.place_particles_in_grid(width, height, 8, 8);
   particle_system.get_particle(20)->set_vel(100.0, 150.0);
   // Set special big particle
   // particle_system.get_particle(49)->set_vel(.0, .0);

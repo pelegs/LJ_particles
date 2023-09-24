@@ -3,6 +3,7 @@
 #include <string>
 #include <ostream>
 #include <sstream>
+#include "otherfuncs.hpp"
 
 template <typename Range, typename Value = typename Range::value_type>
 std::string join(Range const &elements, const char *const delimiter) {
@@ -21,7 +22,7 @@ std::string join(Range const &elements, const char *const delimiter) {
 }
 
 template <typename container, typename type>
-bool in_container(const container &cont, const type &a) {
+bool in_container(const container &cont, type &a) {
   for (auto vec_element : cont)
     if (vec_element == a)
       return 1;

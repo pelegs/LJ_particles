@@ -43,10 +43,7 @@ public:
   vec2 connect(const Particle &p2);
   vec2 look_at(const Particle &p2);
 
-  // Checkers
-  bool is_neighbor(Particle *p);
-  bool is_neighbor_x(Particle *p);
-  bool is_neighbor_y(Particle *p);
+  // Checkers (add neighbor checks)
   void check_wall_collision(const double &width, const double &height);
 
   // Force-related stuff
