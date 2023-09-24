@@ -15,6 +15,8 @@ Particle::Particle() {
   mass = 1.0;
   mass_inv = 1.0;
   rad = 1.0;
+  bounding_distances = vec2{10.0, 10.0};
+  this->set_bounding_points();
   this->reset_neighbors();
 }
 
@@ -61,6 +63,13 @@ void Particle::set_mass(const double &m) {
   this->mass_inv = 1.0 / m;
 }
 void Particle::set_radius(const double &r) { this->rad = r; }
+void Particle::set_bounding_points() {
+  vec2 min_point = this->pos - this->bounding_distances;
+  vec2 max_point = this->pos + this->bounding_distances;
+  this->bounding_points.clear();
+  this->bounding_points.push_back(min_point);
+  this->bounding_points.push_back(max_point);
+}
 
 // Direction between two particles
 vec2 Particle::connect(const Particle &p2) { return p2.get_pos() - this->pos; }

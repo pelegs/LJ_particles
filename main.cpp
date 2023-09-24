@@ -9,8 +9,8 @@
 
 // Own lib
 #include "lib/maths.hpp"
-#include "lib/physics.hpp"
 #include "lib/otherfuncs.hpp"
+#include "lib/physics.hpp"
 
 // GLM-related
 #define GLM_ENABLE_EXPERIMENTAL
@@ -472,7 +472,7 @@ int main(int argc, char *argv[]) {
         particle->interact(*neighbor);
       }
     }
-    for (auto spring: springs)
+    for (auto spring : springs)
       spring->apply_force();
 
     // Velocity Verlet integration

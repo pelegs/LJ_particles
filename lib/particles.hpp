@@ -7,6 +7,8 @@
 class Particle {
   int id;
   vec2 pos, vel, acc, acc_prev, force;
+  vec2 bounding_distances;
+  std::vector<vec2> bounding_points;
   double mass, mass_inv, rad;
   std::set<Particle *> neighbors_x, neighbors_y, neighbors;
 
@@ -35,6 +37,7 @@ public:
   void set_vel(const double &vx, const double &vy);
   void set_mass(const double &m);
   void set_radius(const double &r);
+  void set_bounding_points();
 
   // Direction between two particles
   vec2 connect(const Particle &p2);
