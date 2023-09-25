@@ -2,8 +2,10 @@
 #include <vector>
 
 class ParticleSystem {
-  int num_particles;
-  std::vector<Particle *> particle_list;
+  int num_particles, num_steps;
+  vec2 size;
+  std::vector<Particle *> particle_list = {};
+  std::vector<double> trajectories = {};
 
 public:
   ParticleSystem();
@@ -11,7 +13,7 @@ public:
 
   // Particle management
   void add_particle(Particle *p);
-  void remove_particle();
+  // void remove_particle();
   Particle* get_particle(int i);
   std::vector<Particle *> get_particle_list();
 
@@ -24,5 +26,6 @@ public:
                       const double &height);
 
   // Data managment
-  void append_new_data(std::vector<double> &data);
+  void update_trajectory_data();
+  void save_data(std::string filename);
 };

@@ -13,9 +13,12 @@ ParticleSystem::~ParticleSystem() {
 // Particle management
 void ParticleSystem::add_particle(Particle *p) {
   this->particle_list.push_back(p);
+  this->num_particles++;
 }
 
-void ParticleSystem::remove_particle() {} // TBW
+void ParticleSystem::remove_particle() {
+  this->num_particles--;
+} // TBW
 
 Particle* ParticleSystem::get_particle(int i) { return this->particle_list[i]; }
 
@@ -53,9 +56,9 @@ void ParticleSystem::move_particles(const double &dt, const double &width,
 }
 
 // Data managment
-void ParticleSystem::append_new_data(std::vector<double> &data) {
+void ParticleSystem::save_trajectory_data() {
   for (auto particle : this->particle_list) {
-    data.push_back(particle->get_x());
-    data.push_back(particle->get_y());
+    this->trajectories.push_back(particle->get_x());
+    this->trajectories.push_back(particle->get_y());
   }
 }

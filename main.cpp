@@ -32,35 +32,6 @@ bool comapreParticleByYPos(const Particle *lhs, const Particle *rhs) {
   return lhs->get_y() < rhs->get_y();
 }
 
-void save_data(const std::string &filename, const std::vector<double> box_size,
-               unsigned long num_particles, unsigned long num_steps,
-               unsigned long skip, const std::vector<double> trajectories,
-               const std::vector<double> masses,
-               const std::vector<double> radii) {
-  cnpy::npz_save(filename, "box_size", &box_size[0], {2}, "w");
-  // cnpy::npz_save(filename, "neighbors_matrix", &neighbors_matrix[0],
-  //                {num_steps / skip, num_particles, num_particles}, "a");
-  cnpy::npz_save(filename, "trajectories", &trajectories[0],
-                 {num_steps / skip, num_particles, 2}, "a");
-  cnpy::npz_save(filename, "masses", &masses[0], {num_particles}, "a");
-  cnpy::npz_save(filename, "radii", &radii[0], {num_particles}, "a");
-  // in each frame i: data[i, :, :].T <-- note the transpose!
-}
-
-void find_neighbors(const int &axis, const int &dir,
-                    const std::vector<Particle *> particle_list,
-                    const int &num_particles) {
-  for (int id = 0; id < num_particles; id++) {
-    for (int i = id + dir; i >= 0 && i < num_particles; i += dir) {
-      if (distance1D(particle_list[id]->get_pos()[axis],
-                     particle_list[i]->get_pos()[axis]) <= R_CUTOFF)
-        particle_list[id]->add_neighbor(axis, particle_list[i]);
-      else
-        break;
-    }
-  }
-}
-
 /**********************/
 /*        Main        */
 /**********************/
@@ -178,7 +149,7 @@ int main(int argc, char *argv[]) {
     // Data related
     // (TODO: should be moved to ParticleSystem)
     if (step % skip == 0) {
-      particle_system.append_new_data(trajectories); // Trajectories
+      particle_system.update_trajectory_data(trajectories); // Trajectories
       for (auto particle :
            particle_system.get_particle_list()) { // neighbor matrix
         std::fill(nmat_row.begin(), nmat_row.end(), 0);
