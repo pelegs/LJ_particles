@@ -15,7 +15,7 @@ class Particle {
 public:
   Particle();
   Particle(const int &id, const vec2 &pos, const vec2 &vel, const double &mass,
-           const double &rad);
+           const double &rad, const vec2 &bounding_distances);
   ~Particle();
 
   // Getters
@@ -28,6 +28,8 @@ public:
   vec2 get_force() const;
   double get_mass() const;
   double get_radius() const;
+  double get_min_AABB(int axis) const;
+  double get_max_AABB(int axis) const;
   std::set<Particle *> get_neighbors_list() const;
   std::set<Particle *> get_neighbors_x();
   std::set<Particle *> get_neighbors_y();
@@ -43,7 +45,7 @@ public:
   vec2 connect(const Particle &p2);
   vec2 look_at(const Particle &p2);
 
-  // Checkers (add neighbor checks)
+  // Checkers (add neighbor checks
   void check_wall_collision(const double &width, const double &height);
 
   // Force-related stuff
@@ -63,6 +65,12 @@ public:
   void add_neighbor(int axis, Particle *neighbor);
   void generate_neighbors_list_by_intersection();
   std::vector<int> neighbor_ids();
+};
+
+struct CompareParticlesAABB {
+  int axis;
+  CompareParticlesAABB(int ax);
+  bool operator()(const Particle *p1, const Particle *p2);
 };
 
 #endif // !PARTICLES

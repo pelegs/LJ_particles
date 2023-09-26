@@ -1,9 +1,12 @@
-#include <set>
-#include <algorithm>
 #include "particles.hpp"
 #include "maths.hpp"
 #include "otherfuncs.hpp"
 #include "physics.hpp"
+#include <algorithm>
+#include <set>
+
+const int MIN_BB = 0;
+const int MAX_BB = 1;
 
 Particle::Particle() {
   id = 0;
@@ -21,13 +24,15 @@ Particle::Particle() {
 }
 
 Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
-                   const double &mass, const double &rad) {
+                   const double &mass, const double &rad, const vec2 &bounding_distances) {
   this->id = id;
   this->pos = pos;
   this->vel = vel;
   this->mass = mass;
   this->mass_inv = 1.0 / mass;
   this->rad = rad;
+  this->bounding_distances = bounding_distances;
+  this->set_bounding_points();
   this->reset_neighbors();
 }
 
@@ -43,6 +48,12 @@ vec2 Particle::get_acc() const { return this->acc; }
 vec2 Particle::get_force() const { return this->force; }
 double Particle::get_mass() const { return this->mass; }
 double Particle::get_radius() const { return this->rad; }
+double Particle::get_min_AABB(int axis) const {
+  return this->bounding_points[MIN_BB][axis];
+}
+double Particle::get_max_AABB(int axis) const {
+  return this->bounding_points[MAX_BB][axis];
+}
 std::set<Particle *> Particle::get_neighbors_list() const {
   return this->neighbors;
 }
@@ -53,6 +64,7 @@ std::set<Particle *> Particle::get_neighbors_y() { return this->neighbors_y; }
 void Particle::set_pos(const double &x, const double &y) {
   vec2 pos = {x, y};
   this->pos = pos;
+  this->set_bounding_points();
 }
 void Particle::set_vel(const double &vx, const double &vy) {
   vec2 vel = {vx, vy};
@@ -151,4 +163,9 @@ std::vector<int> Particle::neighbor_ids() {
     ids.push_back(neighbor->get_id());
   }
   return ids;
+}
+
+CompareParticlesAABB::CompareParticlesAABB(int ax) { this->axis = ax; }
+bool CompareParticlesAABB::operator()(const Particle *p1, const Particle *p2) {
+  return p1->get_min_AABB(axis) < p2->get_min_AABB(axis);
 }
