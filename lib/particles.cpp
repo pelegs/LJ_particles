@@ -3,6 +3,7 @@
 #include "otherfuncs.hpp"
 #include "physics.hpp"
 #include <algorithm>
+#include <glm/gtx/string_cast.hpp>
 #include <set>
 
 const int MIN_BB = 0;
@@ -18,20 +19,21 @@ Particle::Particle() {
   mass = 1.0;
   mass_inv = 1.0;
   rad = 1.0;
-  bounding_distances = vec2{10.0, 10.0};
+  bounding_distance = 10.0;
   this->set_bounding_points();
   this->reset_neighbors();
 }
 
 Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
-                   const double &mass, const double &rad, const vec2 &bounding_distances) {
+                   const double &mass, const double &rad,
+                   const double &bounding_distance) {
   this->id = id;
   this->pos = pos;
   this->vel = vel;
   this->mass = mass;
   this->mass_inv = 1.0 / mass;
   this->rad = rad;
-  this->bounding_distances = bounding_distances;
+  this->bounding_distance = bounding_distance;
   this->set_bounding_points();
   this->reset_neighbors();
 }
@@ -48,6 +50,9 @@ vec2 Particle::get_acc() const { return this->acc; }
 vec2 Particle::get_force() const { return this->force; }
 double Particle::get_mass() const { return this->mass; }
 double Particle::get_radius() const { return this->rad; }
+double Particle::get_bounding_distance() const {
+  return this->bounding_distance;
+}
 double Particle::get_min_AABB(int axis) const {
   return this->bounding_points[MIN_BB][axis];
 }
@@ -76,8 +81,8 @@ void Particle::set_mass(const double &m) {
 }
 void Particle::set_radius(const double &r) { this->rad = r; }
 void Particle::set_bounding_points() {
-  vec2 min_point = this->pos - this->bounding_distances;
-  vec2 max_point = this->pos + this->bounding_distances;
+  vec2 min_point = this->pos - this->bounding_distance;
+  vec2 max_point = this->pos + this->bounding_distance;
   this->bounding_points.clear();
   this->bounding_points.push_back(min_point);
   this->bounding_points.push_back(max_point);

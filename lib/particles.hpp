@@ -7,7 +7,7 @@
 class Particle {
   int id;
   vec2 pos, vel, acc, acc_prev, force;
-  vec2 bounding_distances;
+  double bounding_distance;
   std::vector<vec2> bounding_points;
   double mass, mass_inv, rad;
   std::set<Particle *> neighbors_x, neighbors_y, neighbors;
@@ -15,7 +15,7 @@ class Particle {
 public:
   Particle();
   Particle(const int &id, const vec2 &pos, const vec2 &vel, const double &mass,
-           const double &rad, const vec2 &bounding_distances);
+           const double &rad, const double &bounding_distance);
   ~Particle();
 
   // Getters
@@ -28,6 +28,7 @@ public:
   vec2 get_force() const;
   double get_mass() const;
   double get_radius() const;
+  double get_bounding_distance() const;
   double get_min_AABB(int axis) const;
   double get_max_AABB(int axis) const;
   std::set<Particle *> get_neighbors_list() const;

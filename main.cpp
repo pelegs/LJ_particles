@@ -29,30 +29,34 @@ int main(int argc, char *argv[]) {
   double width = atof(argv[1]);
   double height = atof(argv[2]);
   int num_particles = atoi(argv[3]);
-  double distances = atof(argv[4]);
-  vec2 distances_vec(distances, distances);
-  std::string filename = argv[5];
+  double max_BB_size = atof(argv[4]);
+  double max_radius = atof(argv[5]);
+  std::string filename = argv[6];
 
-  // randomness!
-  srand(time(NULL));
+  // randomness! (note: not even pseudorandom)
+  std::random_device r;
   std::uniform_real_distribution<double> unif_width(0.0, width);
   std::uniform_real_distribution<double> unif_height(0.0, height);
+  std::uniform_real_distribution<double> unif_radii(0.5, max_radius);
+  std::uniform_real_distribution<double> unif_bd(1.0, max_BB_size);
   std::default_random_engine re;
-  double rand_x, rand_y;
+  double rand_x, rand_y, rand_rad, rand_bd;
 
   ParticleSystem particle_system;
   for (int id=0; id<num_particles; id++) {
     rand_x = unif_width(re);
     rand_y = unif_height(re);
+    rand_rad = unif_radii(re);
+    rand_bd = unif_bd(re);
     vec2 pos(rand_x, rand_y);
     particle_system.add_particle(
-      new Particle(id, pos, O_, 1.0, 1.0, distances_vec)
+      new Particle(id, pos, O_, 1.0, rand_rad, rand_rad+rand_bd)
     );
   }
 
   particle_system.calc_new_positions(0.001);
   particle_system.sort_particles_all_directions();
-  particle_system.save_data(filename, false, false, true);
+  particle_system.save_data(filename, true, false, true);
 
   return 0;
 }

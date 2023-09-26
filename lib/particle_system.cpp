@@ -68,7 +68,8 @@ void ParticleSystem::calc_accelerations() {
 void ParticleSystem::calc_new_velocities(const double &dt) {
   for (auto &p : this->particle_list) {
     p->calc_new_vel(dt);
-    p->check_wall_collision(this->space_dimensions[X], this->space_dimensions[Y]);
+    p->check_wall_collision(this->space_dimensions[X],
+                            this->space_dimensions[Y]);
   }
 }
 
@@ -113,7 +114,6 @@ void ParticleSystem::save_data(std::string filename,
                    {this->num_steps, this->num_particles, 2}, "a");
   }
 
-  std::cout << this->trajectories.size() << std::endl;
   if (this->trajectories.size()) {
     cnpy::npz_save(filename, "trajectories", &this->trajectories[0],
                    {this->num_steps, this->num_particles, 2}, "a");
@@ -122,12 +122,16 @@ void ParticleSystem::save_data(std::string filename,
   if (save_particle_data) {
     std::vector<double> masses;
     std::vector<double> radii;
+    std::vector<double> bounding_distances;
     for (auto particle : this->particle_list) {
       masses.push_back(particle->get_mass());
       radii.push_back(particle->get_radius());
+      bounding_distances.push_back(particle->get_bounding_distance());
     }
     cnpy::npz_save(filename, "masses", &masses[0], {this->num_particles}, "a");
     cnpy::npz_save(filename, "radii", &radii[0], {this->num_particles}, "a");
+    cnpy::npz_save(filename, "bounding_distances", &bounding_distances[0],
+                   {this->num_particles}, "a");
   }
 
   if (save_neighbor_matrix && this->neighbors_matrix.size()) {
