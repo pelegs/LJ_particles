@@ -10,6 +10,13 @@ ParticleSystem::ParticleSystem() {
   this->particle_list.clear();
 }
 
+ParticleSystem::ParticleSystem(double width, double height) {
+  this->num_particles = 0;
+  this->num_steps = 0;
+  this->particle_list.clear();
+  this->space_dimensions = vec2(width, height);
+}
+
 ParticleSystem::~ParticleSystem() {
   for (auto particle : this->particle_list)
     delete particle;
@@ -108,11 +115,24 @@ void ParticleSystem::calc_new_velocities(const double &dt) {
   }
 }
 
+void ParticleSystem::interact(bool LJ=false, bool gravity=false, bool springs=false) {
+  for (auto particle:this->particle_list) {
+    if (LJ)
+      for (auto neighbor:particle->get_neighbors_list())
+        particle->LJ_force(*neighbor);
+  }
+}
+
 void ParticleSystem::move_particles(const double &dt) {
-  calc_new_positions(dt);
-  // interaction
-  calc_accelerations();
-  calc_new_velocities(dt);
+  this->calc_new_positions(dt);
+  this->update_trajectory_data();
+  this->reset_neighbors();
+  this->sort_particles_all_directions();
+  this->assign_neighbors();
+  this->update_neighbors_matrix();
+  this->interact();
+  this->calc_accelerations();
+  this->calc_new_velocities(dt);
 }
 
 // Data managment

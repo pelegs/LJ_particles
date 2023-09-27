@@ -146,7 +146,6 @@ void Particle::reset_neighbors() {
 }
 
 void Particle::add_neighbor(int axis, Particle *neighbor) {
-  std::cerr << "Adding particle " << neighbor->get_id() << " as neighbor to " << this->id << " in " << axis << " axis" << std::endl;
   if (axis == ALL_AXES)
     this->neighbors.insert(neighbor);
   else if (axis == X_AX)

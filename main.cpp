@@ -7,10 +7,10 @@
 
 // Own lib
 #include "lib/maths.hpp"
-#include "lib/physics.hpp"
 #include "lib/otherfuncs.hpp"
-#include "lib/particles.hpp"
 #include "lib/particle_system.hpp"
+#include "lib/particles.hpp"
+#include "lib/physics.hpp"
 #include "lib/spring.hpp"
 
 // GLM-related
@@ -29,36 +29,25 @@ int main(int argc, char *argv[]) {
   double width = atof(argv[1]);
   double height = atof(argv[2]);
   int num_particles = atoi(argv[3]);
-  double max_BB_size = atof(argv[4]);
-  double max_radius = atof(argv[5]);
-  std::string filename = argv[6];
+  int num_steps = atoi(argv[4]);
+  double dt = atof(argv[5]);
+  double max_BB_size = atof(argv[6]);
+  double max_radius = atof(argv[7]);
+  std::string filename = argv[8];
 
   // randomness! (note: not even pseudorandom)
-  std::random_device r;
-  std::uniform_real_distribution<double> unif_width(0.0, width);
-  std::uniform_real_distribution<double> unif_height(0.0, height);
-  std::uniform_real_distribution<double> unif_radii(0.5, max_radius);
-  std::uniform_real_distribution<double> unif_bd(1.0, max_BB_size);
-  std::default_random_engine re;
-  double rand_x, rand_y, rand_rad, rand_bd;
-
-  ParticleSystem particle_system;
-  for (int id=0; id<num_particles; id++) {
-    rand_x = unif_width(re);
-    rand_y = unif_height(re);
-    rand_rad = unif_radii(re);
-    rand_bd = unif_bd(re);
-    vec2 pos(rand_x, rand_y);
+  ParticleSystem particle_system(width, height);
+  vec2 pos0(width/2.0, height/2.0);
+  for (int id = 0; id < num_particles; id++) {
+    vec2 pos = glm::sphericalRand(width/2.0);
+    vec2 vel = glm::sphericalRand(25.0);
     particle_system.add_particle(
-      new Particle(id, pos, O_, 1.0, rand_rad, rand_rad+rand_bd)
-    );
+        new Particle(id, pos+pos0, vel, 1.0, 5.0, 50.0));
   }
 
-  particle_system.calc_new_positions(0.001);
-  particle_system.reset_neighbors();
-  particle_system.sort_particles_all_directions();
-  particle_system.assign_neighbors();
-  particle_system.update_neighbors_matrix();
+  for (int step = 0; step < num_steps; step++)
+    particle_system.move_particles(dt);
+
   particle_system.save_data(filename, true, true, true);
 
   return 0;

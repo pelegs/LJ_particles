@@ -13,6 +13,7 @@ class ParticleSystem {
 
 public:
   ParticleSystem();
+  ParticleSystem(double width, double height);
   ~ParticleSystem();
 
   // Particle management
@@ -33,6 +34,7 @@ public:
   void calc_accelerations();
   void calc_new_velocities(const double &dt);
   void move_particles(const double &dt);
+  void interact(bool LJ, bool gravity, bool springs);
 
   // Data managment
   void update_trajectory_data();
