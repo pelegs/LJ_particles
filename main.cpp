@@ -55,8 +55,11 @@ int main(int argc, char *argv[]) {
   }
 
   particle_system.calc_new_positions(0.001);
+  particle_system.reset_neighbors();
   particle_system.sort_particles_all_directions();
-  particle_system.save_data(filename, true, false, true);
+  particle_system.assign_neighbors();
+  particle_system.update_neighbors_matrix();
+  particle_system.save_data(filename, true, true, true);
 
   return 0;
 }

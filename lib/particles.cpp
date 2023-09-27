@@ -143,9 +143,9 @@ void Particle::calc_new_vel(const double &dt) {
 
 // Neighbors related
 void Particle::reset_neighbors() {
-  this->neighbors_x.clear();
-  this->neighbors_y.clear();
-  this->neighbors.clear();
+    this->neighbors.clear();
+    this->neighbors_x.clear();
+    this->neighbors_y.clear();
 }
 
 void Particle::add_neighbor(int axis, Particle *neighbor) {

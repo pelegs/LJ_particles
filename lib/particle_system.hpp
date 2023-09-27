@@ -22,8 +22,11 @@ public:
   std::vector<Particle *> get_particle_list();
 
   // Collision detection
+  void reset_neighbors();
   void sort_particles(int axis);
   void sort_particles_all_directions();
+  void assign_neighbors_by_axis(int axis);
+  void assign_neighbors();
 
   // Dynamics
   void calc_new_positions(const double &dt);

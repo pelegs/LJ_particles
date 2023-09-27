@@ -1,5 +1,6 @@
 #include "particle_system.hpp"
 #include <algorithm>
+#include <iostream>
 
 ParticleSystem::ParticleSystem() {
   this->num_particles = 0;
@@ -31,6 +32,11 @@ std::vector<Particle *> ParticleSystem::get_particle_list() {
 }
 
 // Collision detection
+void ParticleSystem::reset_neighbors() {
+  for (auto particle : this->particle_list)
+    particle->reset_neighbors();
+}
+
 void ParticleSystem::sort_particles(int axis) {
   std::sort(this->particle_list_sorted[axis].begin(),
             this->particle_list_sorted[axis].end(), CompareParticlesAABB(axis));
@@ -47,6 +53,31 @@ void ParticleSystem::sort_particles_all_directions() {
     this->sorted_particle_ids_X.push_back(particle->get_id());
   for (auto particle : this->particle_list_sorted[Y])
     this->sorted_particle_ids_Y.push_back(particle->get_id());
+}
+
+void ParticleSystem::assign_neighbors_by_axis(int axis) {
+  for (auto it1 = this->particle_list_sorted[axis].begin();
+       it1 != std::prev(this->particle_list_sorted[axis].end()); ++it1) {
+    auto &p1 = *it1;
+    for (auto it2 = (it1 + 1);
+         it2 != std::prev(this->particle_list_sorted[axis].end()); ++it2) {
+      auto &p2 = *it2;
+      if (p2->get_min_AABB(axis) < p1->get_max_AABB(axis)) {
+        p1->add_neighbor(axis, p2);
+        p2->add_neighbor(axis, p1);
+      } else {
+        break;
+      }
+    }
+  }
+}
+
+void ParticleSystem::assign_neighbors() {
+  this->assign_neighbors_by_axis(X);
+  this->assign_neighbors_by_axis(Y);
+  for (auto particle : this->particle_list) {
+    particle->generate_neighbors_list_by_intersection();
+  }
 }
 
 // Dynamics
