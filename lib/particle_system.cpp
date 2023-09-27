@@ -84,9 +84,9 @@ void ParticleSystem::assign_neighbors_by_axis(int axis) {
 void ParticleSystem::assign_neighbors() {
   this->assign_neighbors_by_axis(X_AX);
   this->assign_neighbors_by_axis(Y_AX);
-  for (auto particle : this->particle_list) {
+  for (auto &particle : this->particle_list) {
     particle->generate_neighbors_list_by_intersection();
-    for (auto neighor : particle->get_neighbors_list())
+    for (auto &neighor : particle->get_neighbors_list())
       neighor->add_neighbor(ALL_AXES, particle);
   }
 }
@@ -130,7 +130,7 @@ void ParticleSystem::move_particles(const double &dt) {
   this->sort_particles_all_directions();
   this->assign_neighbors();
   this->update_neighbors_matrix();
-  this->interact();
+  // this->interact();
   this->calc_accelerations();
   this->calc_new_velocities(dt);
 }

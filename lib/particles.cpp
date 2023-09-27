@@ -128,6 +128,7 @@ void Particle::interact(const Particle &p2) {
 // Velocity Verlet?..
 void Particle::calc_new_pos(const double &dt) {
   this->pos += this->vel * dt + 0.5 * this->acc * dt * dt;
+  this->set_bounding_points();
 }
 void Particle::calc_acc() {
   this->acc_prev = this->acc;

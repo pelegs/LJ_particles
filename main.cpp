@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     vec2 pos = glm::sphericalRand(width/2.0);
     vec2 vel = glm::sphericalRand(25.0);
     particle_system.add_particle(
-        new Particle(id, pos+pos0, vel, 1.0, 5.0, 50.0));
+        new Particle(id, pos+pos0, vel, 1.0, 1.0, 10.0));
   }
 
   for (int step = 0; step < num_steps; step++)
