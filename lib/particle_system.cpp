@@ -1,5 +1,7 @@
 #include "particle_system.hpp"
+#include "otherfuncs.hpp"
 #include <algorithm>
+#include <fmt/format.h>
 #include <iostream>
 
 ParticleSystem::ParticleSystem() {
@@ -16,8 +18,8 @@ ParticleSystem::~ParticleSystem() {
 // Particle management
 void ParticleSystem::add_particle(Particle *p) {
   this->particle_list.push_back(p);
-  this->particle_list_sorted[X].push_back(p);
-  this->particle_list_sorted[Y].push_back(p);
+  this->particle_list_sorted[X_AX].push_back(p);
+  this->particle_list_sorted[Y_AX].push_back(p);
   this->num_particles++;
 }
 
@@ -37,21 +39,21 @@ void ParticleSystem::reset_neighbors() {
     particle->reset_neighbors();
 }
 
-void ParticleSystem::sort_particles(int axis) {
+void ParticleSystem::sort_particles_by_min_AABB(int axis) {
   std::sort(this->particle_list_sorted[axis].begin(),
             this->particle_list_sorted[axis].end(), CompareParticlesAABB(axis));
 }
 
 void ParticleSystem::sort_particles_all_directions() {
-  this->sort_particles(X);
-  this->sort_particles(Y);
+  this->sort_particles_by_min_AABB(X_AX);
+  this->sort_particles_by_min_AABB(Y_AX);
 
   // temp
   this->sorted_particle_ids_X.clear();
   this->sorted_particle_ids_Y.clear();
-  for (auto particle : this->particle_list_sorted[X])
+  for (auto particle : this->particle_list_sorted[X_AX])
     this->sorted_particle_ids_X.push_back(particle->get_id());
-  for (auto particle : this->particle_list_sorted[Y])
+  for (auto particle : this->particle_list_sorted[Y_AX])
     this->sorted_particle_ids_Y.push_back(particle->get_id());
 }
 
@@ -59,8 +61,8 @@ void ParticleSystem::assign_neighbors_by_axis(int axis) {
   for (auto it1 = this->particle_list_sorted[axis].begin();
        it1 != std::prev(this->particle_list_sorted[axis].end()); ++it1) {
     auto &p1 = *it1;
-    for (auto it2 = (it1 + 1);
-         it2 != std::prev(this->particle_list_sorted[axis].end()); ++it2) {
+    for (auto it2 = (it1 + 1); it2 != this->particle_list_sorted[axis].end();
+         ++it2) {
       auto &p2 = *it2;
       if (p2->get_min_AABB(axis) < p1->get_max_AABB(axis)) {
         p1->add_neighbor(axis, p2);
@@ -73,10 +75,12 @@ void ParticleSystem::assign_neighbors_by_axis(int axis) {
 }
 
 void ParticleSystem::assign_neighbors() {
-  this->assign_neighbors_by_axis(X);
-  this->assign_neighbors_by_axis(Y);
+  this->assign_neighbors_by_axis(X_AX);
+  this->assign_neighbors_by_axis(Y_AX);
   for (auto particle : this->particle_list) {
     particle->generate_neighbors_list_by_intersection();
+    for (auto neighor : particle->get_neighbors_list())
+      neighor->add_neighbor(ALL_AXES, particle);
   }
 }
 
@@ -99,8 +103,8 @@ void ParticleSystem::calc_accelerations() {
 void ParticleSystem::calc_new_velocities(const double &dt) {
   for (auto &p : this->particle_list) {
     p->calc_new_vel(dt);
-    p->check_wall_collision(this->space_dimensions[X],
-                            this->space_dimensions[Y]);
+    p->check_wall_collision(this->space_dimensions[X_AX],
+                            this->space_dimensions[Y_AX]);
   }
 }
 
@@ -125,8 +129,23 @@ void ParticleSystem::update_neighbors_matrix() {
     std::fill(neighbors_row.begin(), neighbors_row.end(), 0);
     for (auto neighbor : particle->get_neighbors_list())
       neighbors_row[neighbor->get_id()] = 1;
-    this->neighbors_matrix.insert(this->neighbors_matrix.begin(),
+    this->neighbors_matrix.insert(this->neighbors_matrix.end(),
                                   neighbors_row.begin(), neighbors_row.end());
+  }
+}
+
+void ParticleSystem::validate_neighbors() {
+  for (auto particle : this->particle_list) {
+    for (auto neighbor : particle->get_neighbors_list()) {
+      if (particle_in_set(neighbor->get_neighbors_list(), particle))
+        std::cerr << "particle " << particle->get_id()
+                  << " is in neighbor list of particle " << neighbor->get_id()
+                  << std::endl;
+      else
+        std::cerr << "particle " << particle->get_id()
+                  << " is ***NOT*** in neighbor list of particle "
+                  << neighbor->get_id() << std::endl;
+    }
   }
 }
 

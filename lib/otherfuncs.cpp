@@ -29,6 +29,14 @@ bool in_container(const container &cont, const type &a) {
   return 0;
 }
 
+bool particle_in_set(const std::set<Particle *> list, Particle *p) {
+  for (auto particle:list) {
+    if (particle == p)
+      return true;
+  }
+  return false;
+}
+
 void save_data(const std::string &filename, const std::vector<double> box_size,
                unsigned long num_particles, unsigned long num_steps,
                unsigned long skip, const std::vector<double> trajectories,

@@ -4,6 +4,9 @@
 #include "maths.hpp"
 #include <set>
 
+const int MIN_BB = 0;
+const int MAX_BB = 1;
+
 class Particle {
   int id;
   vec2 pos, vel, acc, acc_prev, force;

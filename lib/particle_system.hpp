@@ -23,7 +23,7 @@ public:
 
   // Collision detection
   void reset_neighbors();
-  void sort_particles(int axis);
+  void sort_particles_by_min_AABB(int axis);
   void sort_particles_all_directions();
   void assign_neighbors_by_axis(int axis);
   void assign_neighbors();
@@ -37,6 +37,7 @@ public:
   // Data managment
   void update_trajectory_data();
   void update_neighbors_matrix();
+  void validate_neighbors();
   void save_data(std::string filename, bool save_particle_data,
                  bool save_neighbor_matrix, bool save_sort_data);
 };

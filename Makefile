@@ -1,6 +1,6 @@
 COMPILER=g++
 LDFLAGS=-lcnpy -lz
-STD=c++11
+STD=c++17
 MAIN=main
 LIBFOLDER=lib
 

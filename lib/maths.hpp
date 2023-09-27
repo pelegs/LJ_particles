@@ -32,8 +32,9 @@ const mat22 I2 = mat22(1.0);
 // Row-columns related
 const int ROW = 0;
 const int COL = 1;
-const int X = 0;
-const int Y = 1;
+const int ALL_AXES = -1;
+const int X_AX = 0;
+const int Y_AX = 1;
 const int FORWARD = 1;
 const int BACKWARDS = -1;
 

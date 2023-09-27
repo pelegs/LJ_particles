@@ -6,9 +6,6 @@
 #include <glm/gtx/string_cast.hpp>
 #include <set>
 
-const int MIN_BB = 0;
-const int MAX_BB = 1;
-
 Particle::Particle() {
   id = 0;
   pos = O_;
@@ -96,11 +93,11 @@ vec2 Particle::look_at(const Particle &p2) {
 
 // Checkers
 void Particle::check_wall_collision(const double &width, const double &height) {
-  if (pos[X] < this->rad || std::abs(pos[X] - this->rad) > width) {
-    this->vel[X] *= -1;
+  if (pos[X_AX] < this->rad || std::abs(pos[X_AX] - this->rad) > width) {
+    this->vel[X_AX] *= -1;
   }
-  if (pos[Y] < this->rad || std::abs(pos[Y] - this->rad) > height) {
-    this->vel[Y] *= -1;
+  if (pos[Y_AX] < this->rad || std::abs(pos[Y_AX] - this->rad) > height) {
+    this->vel[Y_AX] *= -1;
   }
 }
 
@@ -143,23 +140,28 @@ void Particle::calc_new_vel(const double &dt) {
 
 // Neighbors related
 void Particle::reset_neighbors() {
-    this->neighbors.clear();
-    this->neighbors_x.clear();
-    this->neighbors_y.clear();
+  this->neighbors.clear();
+  this->neighbors_x.clear();
+  this->neighbors_y.clear();
 }
 
 void Particle::add_neighbor(int axis, Particle *neighbor) {
-  if (axis == X)
+  std::cerr << "Adding particle " << neighbor->get_id() << " as neighbor to " << this->id << " in " << axis << " axis" << std::endl;
+  if (axis == ALL_AXES)
+    this->neighbors.insert(neighbor);
+  else if (axis == X_AX)
     this->neighbors_x.insert(neighbor);
-  if (axis == Y)
+  else if (axis == Y_AX)
     this->neighbors_y.insert(neighbor);
 }
 
 void Particle::generate_neighbors_list_by_intersection() {
-  this->neighbors.clear();
   set_intersection(this->neighbors_x.begin(), this->neighbors_x.end(),
                    this->neighbors_y.begin(), this->neighbors_y.end(),
                    std::inserter(this->neighbors, this->neighbors.begin()));
+  for (auto neighbor:this->neighbors) {
+    neighbor->add_neighbor(ALL_AXES, this);
+  }
 }
 
 std::vector<int> Particle::neighbor_ids() {
