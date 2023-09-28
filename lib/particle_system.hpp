@@ -7,9 +7,9 @@ class ParticleSystem {
   vec2 space_dimensions;
   std::vector<Particle *> particle_list = {};
   std::vector<Particle *> particle_list_sorted[2];
-  std::vector<double> trajectories = {};
+  std::vector<double> trajectories = {}, AABB_min = {}, AABB_max = {};
   std::vector<int> neighbors_matrix = {};
-  std::vector<int> sorted_particle_ids_X, sorted_particle_ids_Y;
+  std::vector<int> sorted_particle_ids_X, sorted_particle_ids_Y; // temp
 
 public:
   ParticleSystem();
@@ -30,16 +30,15 @@ public:
   void assign_neighbors();
 
   // Dynamics
-  void calc_new_positions(const double &dt);
+  void calc_new_positions(const double &dt, const bool &update_data, const bool &update_trajectories_data);
   void calc_accelerations();
   void calc_new_velocities(const double &dt);
   void move_particles(const double &dt);
   void interact(bool LJ, bool gravity, bool springs);
 
   // Data managment
-  void update_trajectory_data();
   void update_neighbors_matrix();
   void validate_neighbors();
   void save_data(std::string filename, bool save_particle_data,
-                 bool save_neighbor_matrix, bool save_sort_data);
+                 bool save_neighbor_matrix, bool save_sort_data, bool save_AABB_data);
 };

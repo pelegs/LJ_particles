@@ -8,12 +8,16 @@ ParticleSystem::ParticleSystem() {
   this->num_particles = 0;
   this->num_steps = 0;
   this->particle_list.clear();
+  this->AABB_min.clear();
+  this->AABB_max.clear();
 }
 
 ParticleSystem::ParticleSystem(double width, double height) {
   this->num_particles = 0;
   this->num_steps = 0;
   this->particle_list.clear();
+  this->AABB_min.clear();
+  this->AABB_max.clear();
   this->space_dimensions = vec2(width, height);
 }
 
@@ -56,8 +60,6 @@ void ParticleSystem::sort_particles_all_directions() {
   this->sort_particles_by_min_AABB(Y_AX);
 
   // temp
-  this->sorted_particle_ids_X.clear();
-  this->sorted_particle_ids_Y.clear();
   for (auto particle : this->particle_list_sorted[X_AX])
     this->sorted_particle_ids_X.push_back(particle->get_id());
   for (auto particle : this->particle_list_sorted[Y_AX])
@@ -92,11 +94,22 @@ void ParticleSystem::assign_neighbors() {
 }
 
 // Dynamics
-void ParticleSystem::calc_new_positions(const double &dt) {
+void ParticleSystem::calc_new_positions(const double &dt,
+                                        const bool &update_trajectories_data,
+                                        const bool &update_AABB) {
   for (auto &p : this->particle_list) {
     p->calc_new_pos(dt);
-    this->trajectories.push_back(p->get_x());
-    this->trajectories.push_back(p->get_y());
+    // Data vectors update (more will be here soon)
+    if (update_trajectories_data) {
+      this->trajectories.push_back(p->get_x());
+      this->trajectories.push_back(p->get_y());
+    }
+    if (update_AABB) {
+      this->AABB_min.push_back(p->get_min_AABB(X_AX));
+      this->AABB_min.push_back(p->get_min_AABB(Y_AX));
+      this->AABB_max.push_back(p->get_max_AABB(X_AX));
+      this->AABB_max.push_back(p->get_max_AABB(Y_AX));
+    }
   }
   this->num_steps++;
 }
@@ -115,17 +128,17 @@ void ParticleSystem::calc_new_velocities(const double &dt) {
   }
 }
 
-void ParticleSystem::interact(bool LJ=false, bool gravity=false, bool springs=false) {
-  for (auto particle:this->particle_list) {
+void ParticleSystem::interact(bool LJ = false, bool gravity = false,
+                              bool springs = false) {
+  for (auto particle : this->particle_list) {
     if (LJ)
-      for (auto neighbor:particle->get_neighbors_list())
+      for (auto neighbor : particle->get_neighbors_list())
         particle->LJ_force(*neighbor);
   }
 }
 
 void ParticleSystem::move_particles(const double &dt) {
-  this->calc_new_positions(dt);
-  this->update_trajectory_data();
+  this->calc_new_positions(dt, true, true);
   this->reset_neighbors();
   this->sort_particles_all_directions();
   this->assign_neighbors();
@@ -136,13 +149,6 @@ void ParticleSystem::move_particles(const double &dt) {
 }
 
 // Data managment
-void ParticleSystem::update_trajectory_data() {
-  for (auto particle : this->particle_list) {
-    this->trajectories.push_back(particle->get_x());
-    this->trajectories.push_back(particle->get_y());
-  }
-}
-
 void ParticleSystem::update_neighbors_matrix() {
   std::vector<int> neighbors_row(this->num_particles, 0);
   for (auto particle : this->particle_list) {
@@ -172,7 +178,8 @@ void ParticleSystem::validate_neighbors() {
 void ParticleSystem::save_data(std::string filename,
                                bool save_particle_data = false,
                                bool save_neighbor_matrix = false,
-                               bool save_sort_data = false) {
+                               bool save_sort_data = false,
+                               bool save_AABB_data = false) {
   cnpy::npz_save(filename, "space_dimensions", &this->space_dimensions[0], {2},
                  "w");
 
@@ -212,8 +219,15 @@ void ParticleSystem::save_data(std::string filename,
 
   if (save_sort_data) {
     cnpy::npz_save(filename, "sort_by_x", &this->sorted_particle_ids_X[0],
-                   {this->num_particles}, "a");
+                   {this->num_steps, this->num_particles}, "a");
     cnpy::npz_save(filename, "sort_by_y", &this->sorted_particle_ids_Y[0],
-                   {this->num_particles}, "a");
+                   {this->num_steps, this->num_particles}, "a");
+  }
+
+  if (save_AABB_data) {
+    cnpy::npz_save(filename, "AABB_min", &this->AABB_min[0],
+                   {this->num_steps, this->num_particles, 2}, "a");
+    cnpy::npz_save(filename, "AABB_max", &this->AABB_max[0],
+                   {this->num_steps, this->num_particles, 2}, "a");
   }
 }

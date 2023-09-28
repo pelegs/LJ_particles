@@ -28,9 +28,23 @@ num_frames = trajectories.shape[0]
 width, height = data["space_dimensions"]
 neighbors_matrix = data["neighbors_matrix"][::skip]
 bounding_distances = data["bounding_distances"]
-# print(bounding_distances)
-# exit()
 
+if "AABB_min" in data:
+    AABB_min = data["AABB_min"][::skip]
+    AABB_max = data["AABB_max"][::skip]
+    AABB_draw = True
+else:
+    AABB_draw = False
+
+if "sort_by_x" in data:
+    positions_sorted_x = data["sort_by_x"][::skip]
+    positions_sorted_y = data["sort_by_y"][::skip]
+    sort_particles = True
+else:
+    sort_particles = False
+# print(positions_sorted_x.shape)
+# print(positions_sorted_y.shape)
+# exit()
 
 colors = cm.rainbow(np.linspace(0, 1, num_particles))
 camera = Camera(plt.figure())
@@ -40,16 +54,20 @@ ax = plt.gca()
 ax.set_aspect('equal', adjustable='box')
 for frame in tqdm(range(num_frames)):
     plt.scatter(*trajectories[frame].T, c=colors, s=marker_sizes)
-    for coords, bb in zip(trajectories[frame], bounding_distances):
-        ax.add_patch(Rectangle(coords-bb*np.array([1.0, 1.0]), 2*bb, 2*bb, linewidth=1,
-                               edgecolor="black", facecolor="none"))
-    pairs = create_neighbor_pairs(neighbors_matrix[frame])
-    for (i, j) in pairs:
-        xi = trajectories[frame, i, 0]
-        yi = trajectories[frame, i, 1]
-        xj = trajectories[frame, j, 0]
-        yj = trajectories[frame, j, 1]
-        plt.plot([xi, xj], [yi, yj], "--", c="black", linewidth=1)
+    if AABB_draw:
+        for pt_min, pt_max in zip(AABB_min[frame], AABB_max[frame]):
+            bb = pt_max - pt_min
+            ax.add_patch(Rectangle(pt_min, bb[0], bb[1], linewidth=1, linestyle="--",
+                                   edgecolor="black", facecolor="none"))
+    if sort_particles:
+        id_min_x = positions_sorted_x[frame][0]
+        id_min_y = positions_sorted_y[frame][0]
+        pos_min_x = trajectories[frame, id_min_x, 0]
+        pos_min_y = trajectories[frame, id_min_y, 1]
+        plt.plot([pos_min_x, pos_min_x], [0, height],
+                 color=colors[id_min_x])
+        plt.plot([0, width], [pos_min_y, pos_min_y],
+                 color=colors[id_min_y])
     camera.snap()
 
 anim = camera.animate(blit=True)

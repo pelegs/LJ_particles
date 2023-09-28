@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
   for (int step = 0; step < num_steps; step++)
     particle_system.move_particles(dt);
 
-  particle_system.save_data(filename, true, true, true);
+  particle_system.save_data(filename, true, true, true, true);
 
   return 0;
 }
