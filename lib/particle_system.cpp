@@ -62,6 +62,7 @@ void ParticleSystem::sort_particles_all_directions() {
   // temp
   for (auto particle : this->particle_list_sorted[X_AX])
     this->sorted_particle_ids_X.push_back(particle->get_id());
+
   for (auto particle : this->particle_list_sorted[Y_AX])
     this->sorted_particle_ids_Y.push_back(particle->get_id());
 }
