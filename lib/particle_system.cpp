@@ -134,6 +134,13 @@ void ParticleSystem::interact(bool LJ = false, bool gravity = false,
     if (LJ)
       for (auto neighbor : particle->get_neighbors_list()) {
         particle->interact(*neighbor);
+        // vec2 force = particle->get_force();
+        // if (glm::length2(force) >= 1.0E6) {
+        //   std::cerr << particle->get_id() << ": F = " << glm::to_string(force)
+        //             << " (distance = " << glm::distance(particle->get_pos(), neighbor->get_pos()) << ")" << std::endl;
+        // }
+        // this->forces.push_back(force.x);
+        // this->forces.push_back(force.y);
       }
   }
 }
@@ -183,7 +190,8 @@ void ParticleSystem::save_data(std::string filename,
                                bool save_particle_data = false,
                                bool save_neighbor_matrix = false,
                                bool save_sort_data = false,
-                               bool save_AABB_data = false) {
+                               bool save_AABB_data = false,
+                               bool save_forces = false) {
   cnpy::npz_save(filename, "space_dimensions", &this->space_dimensions[0], {2},
                  "w");
 
@@ -232,6 +240,11 @@ void ParticleSystem::save_data(std::string filename,
     cnpy::npz_save(filename, "AABB_min", &this->AABB_min[0],
                    {this->num_steps, this->num_particles, 2}, "a");
     cnpy::npz_save(filename, "AABB_max", &this->AABB_max[0],
+                   {this->num_steps, this->num_particles, 2}, "a");
+  }
+
+  if (save_forces) {
+    cnpy::npz_save(filename, "forces", &this->forces[0],
                    {this->num_steps, this->num_particles, 2}, "a");
   }
 }

@@ -1,6 +1,6 @@
-#include <glm/ext/matrix_transform.hpp>
-#include "maths.hpp"
 #include "physics.hpp"
+#include "maths.hpp"
+#include <glm/ext/matrix_transform.hpp>
 
 // Functions
 double distance1D(const double &x, const double &y) {
@@ -20,8 +20,7 @@ double U_LJ(double E, double S, double x) {
 double F_LJ(double S, double x) {
   // Lennard-Jones force
   double S_6 = std::pow(S, 6.0);
-  return -1.0 * 24.0 * LJ_E * S_6 * (std::pow(x, 6.0) - 2 * S_6) /
-         std::pow(x, 13.0);
+  return -24.0 * LJ_E * S_6 * (std::pow(x, 6.0) - 2 * S_6) * std::pow(x, -13.0);
 }
 
 double F_HOOK(double K, double x, double x0) {

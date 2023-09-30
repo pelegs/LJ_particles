@@ -113,21 +113,17 @@ vec2 Particle::LJ_force(const Particle &p2) {
 }
 vec2 Particle::gravity_force(const Particle &p2) {
   vec2 dir = this->connect(p2);
-  double distance = glm::length(dir);
+  double distance2 = glm::length2(dir);
   dir = glm::normalize(dir);
-  if (distance < p2.get_radius())
+  if (distance2 < p2.get_radius())
     dir *= -1.0;
-  double F = GRAV * p2.get_mass() * this->mass / std::pow(distance, 2.0);
+  double F = GRAV * p2.get_mass() * this->mass / distance2;
   return F * dir;
 }
-void Particle::add_force(const vec2 &F) { this->force = this->force + F; }
+void Particle::add_force(const vec2 &F) { this->force += F; }
 void Particle::reset_force() { this->force = O_; }
 void Particle::interact(const Particle &p2) {
-  vec2 LJF = this->LJ_force(p2);
-  if (glm::length2(LJF) >= 1.0E4)
-    LJF = glm::normalize(LJF) * 1.0E4;
-  this->add_force(LJF);
-  // this->add_force(this->gravity_force(p2));
+  this->add_force(this->LJ_force(p2));
 }
 
 // Velocity Verlet?..
