@@ -1,7 +1,6 @@
 #include "particle_system.hpp"
 #include "otherfuncs.hpp"
 #include <algorithm>
-#include <fmt/format.h>
 #include <iostream>
 
 ParticleSystem::ParticleSystem() {
@@ -131,22 +130,26 @@ void ParticleSystem::calc_new_velocities(const double &dt) {
 
 void ParticleSystem::interact(bool LJ = false, bool gravity = false,
                               bool springs = false) {
-  for (auto particle : this->particle_list) {
+  for (auto &particle : this->particle_list) {
     if (LJ)
-      for (auto neighbor : particle->get_neighbors_list())
-        particle->LJ_force(*neighbor);
+      for (auto neighbor : particle->get_neighbors_list()) {
+        particle->interact(*neighbor);
+      }
   }
 }
 
-void ParticleSystem::move_particles(const double &dt) {
+void ParticleSystem::move_particles(const double &dt,
+                                    const bool &with_interactions = false) {
   this->calc_new_positions(dt, true, true);
   this->reset_neighbors();
   this->sort_particles_all_directions();
   this->assign_neighbors();
   this->update_neighbors_matrix();
-  // this->interact();
-  this->calc_accelerations();
-  this->calc_new_velocities(dt);
+  if (with_interactions) {
+    this->interact(true);
+    this->calc_accelerations();
+    this->calc_new_velocities(dt);
+  }
 }
 
 // Data managment

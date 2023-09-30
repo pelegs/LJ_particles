@@ -33,7 +33,7 @@ public:
   void calc_new_positions(const double &dt, const bool &update_data, const bool &update_trajectories_data);
   void calc_accelerations();
   void calc_new_velocities(const double &dt);
-  void move_particles(const double &dt);
+  void move_particles(const double &dt, const bool &with_interactions);
   void interact(bool LJ, bool gravity, bool springs);
 
   // Data managment

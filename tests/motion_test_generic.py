@@ -45,13 +45,12 @@ if "sort_by_x" in data:
     sort_particles = True
 else:
     sort_particles = False
-# print(positions_sorted_x.shape)
-# print(positions_sorted_y.shape)
-# exit()
+
+AABB_draw = sort_particles = False
 
 colors = cm.rainbow(np.linspace(0, 1, num_particles))
 camera = Camera(plt.figure())
-marker_sizes = 10*np.pi*radii**2
+marker_sizes = np.pi*radii**2
 
 # plt.figsize = (1000*px, 1000*px)
 plt.title("Neighbors test using sort-n-sweep")

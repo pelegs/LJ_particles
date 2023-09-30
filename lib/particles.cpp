@@ -42,6 +42,8 @@ int Particle::get_id() const { return this->id; }
 vec2 Particle::get_pos() const { return this->pos; }
 double Particle::get_x() const { return this->pos[0]; }
 double Particle::get_y() const { return this->pos[1]; }
+double Particle::get_vx() const { return this->vel[0]; }
+double Particle::get_vy() const { return this->vel[1]; }
 vec2 Particle::get_acc_prev() const { return this->acc_prev; }
 vec2 Particle::get_acc() const { return this->acc; }
 vec2 Particle::get_force() const { return this->force; }
@@ -121,7 +123,10 @@ vec2 Particle::gravity_force(const Particle &p2) {
 void Particle::add_force(const vec2 &F) { this->force = this->force + F; }
 void Particle::reset_force() { this->force = O_; }
 void Particle::interact(const Particle &p2) {
-  this->add_force(this->LJ_force(p2));
+  vec2 LJF = this->LJ_force(p2);
+  if (glm::length2(LJF) >= 1.0E4)
+    LJF = glm::normalize(LJF) * 1.0E4;
+  this->add_force(LJF);
   // this->add_force(this->gravity_force(p2));
 }
 
@@ -159,7 +164,7 @@ void Particle::generate_neighbors_list_by_intersection() {
   set_intersection(this->neighbors_x.begin(), this->neighbors_x.end(),
                    this->neighbors_y.begin(), this->neighbors_y.end(),
                    std::inserter(this->neighbors, this->neighbors.begin()));
-  for (auto neighbor:this->neighbors) {
+  for (auto neighbor : this->neighbors) {
     neighbor->add_neighbor(ALL_AXES, this);
   }
 }

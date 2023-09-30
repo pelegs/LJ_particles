@@ -4,7 +4,14 @@
 #include <cmath>
 #include <glm/ext/matrix_transform.hpp>
 #include <vector>
+
+// GLM-related
 #define GLM_ENABLE_EXPERIMENTAL
+#include <glm/ext.hpp>
+#include <glm/glm.hpp>
+#define assertm(exp, msg)                                                      \
+  assert(((void)msg, exp)) // use (void) to silence unused warnings
+
 
 typedef glm::vec<2, double> vec2;
 typedef glm::mat<2, 2, double> mat22;

@@ -26,6 +26,8 @@ public:
   vec2 get_pos() const;
   double get_x() const;
   double get_y() const;
+  double get_vx() const;
+  double get_vy() const;
   vec2 get_acc_prev() const;
   vec2 get_acc() const;
   vec2 get_force() const;
