@@ -17,9 +17,6 @@ def create_neighbor_pairs(NM):
 
 
 data = np.load(argv[1])
-draw_neighbors = True
-annotate_sort = False
-draw_extreme_lines = False
 
 # Process data
 skip = int(argv[3])
@@ -31,6 +28,7 @@ num_frames = trajectories.shape[0]
 width, height = data["space_dimensions"]
 neighbors_matrix = data["neighbors_matrix"][::skip]
 bounding_distances = data["bounding_distances"]
+# forces = data["forces"]
 
 if "AABB_min" in data:
     AABB_min = data["AABB_min"][::skip]
@@ -46,7 +44,8 @@ if "sort_by_x" in data:
 else:
     sort_particles = False
 
-AABB_draw = sort_particles = False
+AABB_draw = sort_particles = annotate_sort = False
+draw_extreme_lines = draw_neighbors = draw_force = True
 
 colors = cm.rainbow(np.linspace(0, 1, num_particles))
 camera = Camera(plt.figure())
@@ -61,7 +60,13 @@ ax.set_aspect('equal', adjustable='box')
 lbl_dx = np.array([3.0, 0.0])
 lbl_dy = np.array([0.0, 5.0])
 for frame in tqdm(range(num_frames)):
+    plt.xlim(0.0, width)
+    plt.ylim(0.0, height)
     plt.scatter(*trajectories[frame].T, c=colors, s=marker_sizes)
+
+    if draw_force:
+        pass
+
     if AABB_draw:
         for pt_min, pt_max in zip(AABB_min[frame], AABB_max[frame]):
             bb = pt_max - pt_min

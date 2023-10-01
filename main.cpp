@@ -35,13 +35,18 @@ int main(int argc, char *argv[]) {
   double max_radius = atof(argv[7]);
   std::string filename = argv[8];
 
+  // init randomness?
+  srand(time(NULL));
+
   ParticleSystem particle_system(width, height);
-  vec2 pos0(width/2.0, height/2.0);
+  double x, y;
+  vec2 v = O_;
   for (int id = 0; id < num_particles; id++) {
-    vec2 pos = glm::sphericalRand(width/2.0);
-    vec2 vel = glm::sphericalRand(25.0);
+    x = ((id % 5)+1) * width / 6;
+    y = ((id / 5)+1) * height / 6;
+    v = glm::diskRand(250.0);
     particle_system.add_particle(
-        new Particle(id, pos+pos0, vel, 1.0, 10.0, 3.0));
+        new Particle(id, vec2(x, y), v, 1.0, 10.0, 20.0));
   }
 
   for (int step = 0; step < num_steps; step++)

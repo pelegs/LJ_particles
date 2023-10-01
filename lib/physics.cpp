@@ -1,6 +1,7 @@
 #include "physics.hpp"
 #include "maths.hpp"
 #include <glm/ext/matrix_transform.hpp>
+#include <iostream>
 
 // Functions
 double distance1D(const double &x, const double &y) {

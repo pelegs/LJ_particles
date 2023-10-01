@@ -130,18 +130,15 @@ void ParticleSystem::calc_new_velocities(const double &dt) {
 
 void ParticleSystem::interact(bool LJ = false, bool gravity = false,
                               bool springs = false) {
-  for (auto &particle : this->particle_list) {
+  for (auto particle : this->particle_list) {
     if (LJ)
-      for (auto neighbor : particle->get_neighbors_list()) {
+      for (auto &neighbor : particle->get_neighbors_list())
         particle->interact(*neighbor);
-        // vec2 force = particle->get_force();
-        // if (glm::length2(force) >= 1.0E6) {
-        //   std::cerr << particle->get_id() << ": F = " << glm::to_string(force)
-        //             << " (distance = " << glm::distance(particle->get_pos(), neighbor->get_pos()) << ")" << std::endl;
-        // }
-        // this->forces.push_back(force.x);
-        // this->forces.push_back(force.y);
-      }
+
+    double Fx = particle->get_force()[X_AX];
+    double Fy = particle->get_force()[Y_AX];
+    this->forces.push_back(Fx);
+    this->forces.push_back(Fy);
   }
 }
 
