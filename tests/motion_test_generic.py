@@ -49,7 +49,7 @@ draw_extreme_lines = draw_neighbors = draw_force = True
 
 colors = cm.rainbow(np.linspace(0, 1, num_particles))
 camera = Camera(plt.figure())
-marker_sizes = np.pi*radii**2
+marker_sizes = 0.25*np.pi*radii**2
 
 # plt.figsize = (1000*px, 1000*px)
 plt.title("Neighbors test using sort-n-sweep")

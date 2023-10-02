@@ -22,7 +22,10 @@ particle_system: particles
 spring: particles
 	$(COMPILER) -c $(LIBFOLDER)/spring.cpp -o $(LIBFOLDER)/spring.o --std=$(STD)
 
-main: physics otherfuncs particle_system spring
+main:
+	$(COMPILER) main.cpp -o main --std=$(STD)
+
+all: physics otherfuncs particle_system spring
 	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LIBFOLDER)/otherfuncs.o $(LIBFOLDER)/particles.o $(LIBFOLDER)/particle_system.o $(LIBFOLDER)/spring.o $(LDFLAGS) --std=$(STD)
 
 debug:
