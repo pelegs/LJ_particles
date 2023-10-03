@@ -144,7 +144,7 @@ void ParticleSystem::interact(bool LJ = false, bool gravity = false,
       for (auto &neighbor : particle->get_neighbors_list())
         particle->interact_with_particle(*neighbor);
       for (auto &wall : this->walls) {
-        if (particle->check_collision_with_wall(*wall, 20.0))
+        if (particle->check_collision_with_wall(*wall, particle->get_radius()*3.0))
           particle->interact_with_wall(*wall);
       }
     }

@@ -139,7 +139,7 @@ vec2 Particle::LJ_force(const Wall &wall) {
   vec2 dir = this->look_at(closest_point_on_wall(wall));
   double distance = glm::length(dir);
   dir = glm::normalize(dir);
-  double F = F_LJ(0.75, distance);
+  double F = 0.1*F_LJ(0.75, distance);
   return F * dir;
 }
 vec2 Particle::gravity_force(const Particle &p2) {
