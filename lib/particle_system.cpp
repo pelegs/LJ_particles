@@ -134,8 +134,6 @@ void ParticleSystem::calc_accelerations() {
 void ParticleSystem::calc_new_velocities(const double &dt) {
   for (auto &p : this->particle_list) {
     p->calc_new_vel(dt);
-    // p->check_wall_collision(this->space_dimensions[X_AX],
-    //                         this->space_dimensions[Y_AX]);
   }
 }
 
@@ -146,9 +144,7 @@ void ParticleSystem::interact(bool LJ = false, bool gravity = false,
       for (auto &neighbor : particle->get_neighbors_list())
         particle->interact_with_particle(*neighbor);
       for (auto &wall : this->walls) {
-        this->distances_to_walls.push_back(particle->distance_to_wall(*wall));
-        if (particle->check_collision_with_wall(*wall,
-                                                particle->get_radius() * 5.0))
+        if (particle->check_collision_with_wall(*wall, 20.0))
           particle->interact_with_wall(*wall);
       }
     }
@@ -206,8 +202,7 @@ void ParticleSystem::save_data(std::string filename,
                                bool save_neighbor_matrix = false,
                                bool save_sort_data = false,
                                bool save_AABB_data = false,
-                               bool save_forces = false,
-                               bool save_distances_to_walls = false) {
+                               bool save_forces = false) {
   cnpy::npz_save(filename, "space_dimensions", &this->space_dimensions[0], {2},
                  "w");
 
@@ -271,10 +266,5 @@ void ParticleSystem::save_data(std::string filename,
   if (save_forces) {
     cnpy::npz_save(filename, "forces", &this->forces[0],
                    {this->num_steps, this->num_particles, 2}, "a");
-  }
-
-  if (save_distances_to_walls) {
-    cnpy::npz_save(filename, "distances_to_walls", &this->distances_to_walls[0],
-                   {this->num_steps, this->num_particles}, "a");
   }
 }

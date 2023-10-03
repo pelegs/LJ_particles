@@ -30,6 +30,7 @@ width, height = data["space_dimensions"]
 # bounding_distances = data["bounding_distances"]
 # forces = data["forces"]
 walls = data["walls_data"]
+# closest_wall_pts = data["closest_wall_point"]
 
 if "AABB_min" in data:
     AABB_min = data["AABB_min"][::skip]

@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     particle_system.add_particle(
         new Particle(id, grid_points[id], O_, r*5.0, r, r+3.0));
   }
-  particle_system.get_particle(25)->set_mass(100.0);
+  particle_system.get_particle(25)->set_mass(25.0);
   particle_system.get_particle(25)->set_radius(10.0);
   particle_system.get_particle(25)->set_bounding_distance(17.0);
   particle_system.get_particle(25)->set_vel(-40.0, 65.0);
@@ -63,12 +63,12 @@ int main(int argc, char *argv[]) {
   particle_system.add_wall(new Wall(vec2(0., 0.), vec2(0., height)));
   particle_system.add_wall(new Wall(vec2(width, 0.), vec2(width, height)));
   particle_system.add_wall(new Wall(vec2(0., height), vec2(width, height)));
-  particle_system.add_wall(new Wall(vec2(width/2.0, 450.0), vec2(width/2.0, 550.0)));
+  particle_system.add_wall(new Wall(vec2(0.0, 0.0), vec2(width, height)));
 
   for (int step = 0; step < num_steps; step++)
     particle_system.move_particles(dt, true);
 
-  particle_system.save_data(filename, true, true, false, false, false, false);
+  particle_system.save_data(filename, true, true, false, false, false);
 
   return 0;
 }
