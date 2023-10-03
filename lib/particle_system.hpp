@@ -7,7 +7,8 @@ class ParticleSystem {
   vec2 space_dimensions;
   std::vector<Particle *> particle_list = {};
   std::vector<Particle *> particle_list_sorted[2];
-  std::vector<double> trajectories = {}, AABB_min = {}, AABB_max = {}, forces = {};
+  std::vector<Wall *> walls = {};
+  std::vector<double> trajectories = {}, AABB_min = {}, AABB_max = {}, forces = {}, distances_to_walls;
   std::vector<int> neighbors_matrix = {};
   std::vector<int> sorted_particle_ids_X, sorted_particle_ids_Y; // temp
 
@@ -22,12 +23,16 @@ public:
   Particle *get_particle(int i);
   std::vector<Particle *> get_particle_list();
 
+  // Wall managment
+  void add_wall(Wall *wall);
+
   // Collision detection
   void reset_neighbors();
   void sort_particles_by_min_AABB(int axis);
   void sort_particles_all_directions();
   void assign_neighbors_by_axis(int axis);
   void assign_neighbors();
+  void interact_with_walls(double atol);
 
   // Dynamics
   void calc_new_positions(const double &dt, const bool &update_data, const bool &update_trajectories_data);
@@ -40,5 +45,5 @@ public:
   void update_neighbors_matrix();
   void validate_neighbors();
   void save_data(std::string filename, bool save_particle_data,
-                 bool save_neighbor_matrix, bool save_sort_data, bool save_AABB_data, bool save_forces);
+                 bool save_neighbor_matrix, bool save_sort_data, bool save_AABB_data, bool save_forces, bool save_distances_to_walls);
 };

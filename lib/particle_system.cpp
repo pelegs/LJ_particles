@@ -43,6 +43,9 @@ std::vector<Particle *> ParticleSystem::get_particle_list() {
   return this->particle_list;
 }
 
+// Wall managment
+void ParticleSystem::add_wall(Wall *wall) { this->walls.push_back(wall); }
+
 // Collision detection
 void ParticleSystem::reset_neighbors() {
   for (auto particle : this->particle_list)
@@ -93,6 +96,14 @@ void ParticleSystem::assign_neighbors() {
   }
 }
 
+void ParticleSystem::interact_with_walls(double atol = 0.01) {
+  for (auto &particle : this->particle_list)
+    for (auto wall : this->walls)
+      if (particle->check_collision_with_wall(*wall, atol)) {
+        particle->interact_with_wall(*wall);
+      }
+}
+
 // Dynamics
 void ParticleSystem::calc_new_positions(const double &dt,
                                         const bool &update_trajectories_data,
@@ -123,17 +134,24 @@ void ParticleSystem::calc_accelerations() {
 void ParticleSystem::calc_new_velocities(const double &dt) {
   for (auto &p : this->particle_list) {
     p->calc_new_vel(dt);
-    p->check_wall_collision(this->space_dimensions[X_AX],
-                            this->space_dimensions[Y_AX]);
+    // p->check_wall_collision(this->space_dimensions[X_AX],
+    //                         this->space_dimensions[Y_AX]);
   }
 }
 
 void ParticleSystem::interact(bool LJ = false, bool gravity = false,
                               bool springs = false) {
   for (auto particle : this->particle_list) {
-    if (LJ)
+    if (LJ) {
       for (auto &neighbor : particle->get_neighbors_list())
-        particle->interact(*neighbor);
+        particle->interact_with_particle(*neighbor);
+      for (auto &wall : this->walls) {
+        this->distances_to_walls.push_back(particle->distance_to_wall(*wall));
+        if (particle->check_collision_with_wall(*wall,
+                                                particle->get_radius() * 5.0))
+          particle->interact_with_wall(*wall);
+      }
+    }
 
     double Fx = particle->get_force()[X_AX];
     double Fy = particle->get_force()[Y_AX];
@@ -188,7 +206,8 @@ void ParticleSystem::save_data(std::string filename,
                                bool save_neighbor_matrix = false,
                                bool save_sort_data = false,
                                bool save_AABB_data = false,
-                               bool save_forces = false) {
+                               bool save_forces = false,
+                               bool save_distances_to_walls = false) {
   cnpy::npz_save(filename, "space_dimensions", &this->space_dimensions[0], {2},
                  "w");
 
@@ -209,15 +228,24 @@ void ParticleSystem::save_data(std::string filename,
     std::vector<double> masses;
     std::vector<double> radii;
     std::vector<double> bounding_distances;
+    std::vector<double> walls;
     for (auto particle : this->particle_list) {
       masses.push_back(particle->get_mass());
       radii.push_back(particle->get_radius());
       bounding_distances.push_back(particle->get_bounding_distance());
     }
+    for (auto wall : this->walls) {
+      walls.push_back(wall->get_p0()[X_AX]);
+      walls.push_back(wall->get_p0()[Y_AX]);
+      walls.push_back(wall->get_p1()[X_AX]);
+      walls.push_back(wall->get_p1()[Y_AX]);
+    }
     cnpy::npz_save(filename, "masses", &masses[0], {this->num_particles}, "a");
     cnpy::npz_save(filename, "radii", &radii[0], {this->num_particles}, "a");
     cnpy::npz_save(filename, "bounding_distances", &bounding_distances[0],
                    {this->num_particles}, "a");
+    cnpy::npz_save(filename, "walls_data", &walls[0],
+                   {this->walls.size(), 2, 2}, "a");
   }
 
   if (save_neighbor_matrix && this->neighbors_matrix.size()) {
@@ -243,5 +271,10 @@ void ParticleSystem::save_data(std::string filename,
   if (save_forces) {
     cnpy::npz_save(filename, "forces", &this->forces[0],
                    {this->num_steps, this->num_particles, 2}, "a");
+  }
+
+  if (save_distances_to_walls) {
+    cnpy::npz_save(filename, "distances_to_walls", &this->distances_to_walls[0],
+                   {this->num_steps, this->num_particles}, "a");
   }
 }

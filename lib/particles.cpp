@@ -94,6 +94,9 @@ void Particle::set_bounding_points() {
 
 // Direction between two particles
 vec2 Particle::connect(const Particle &p2) { return p2.get_pos() - this->pos; }
+vec2 Particle::look_at(const vec2 &pt) {
+  return glm::normalize(pt-this->pos);
+}
 vec2 Particle::look_at(const Particle &p2) {
   return glm::normalize(this->connect(p2));
 }
@@ -109,8 +112,9 @@ double Particle::distance_to_wall(const Wall &wall) {
 bool Particle::check_collision_with_wall(const Wall &wall, double atol) {
   return this->distance_to_wall(wall) <= atol;
 }
-void Particle::bounce_from_wall(const Wall &wall){
-  this->vel = glm::reflect(this->vel, wall.get_normal());
+void Particle::interact_with_wall(const Wall &wall){
+  // this->vel = glm::reflect(this->vel, wall.get_normal());
+  this->add_force(this->LJ_force(wall));
 }
 
 // Checkers
@@ -128,7 +132,14 @@ vec2 Particle::LJ_force(const Particle &p2) {
   vec2 dir = this->connect(p2);
   double distance = glm::length(dir);
   dir = glm::normalize(dir);
-  double F = F_LJ(p2.rad, distance);
+  double F = F_LJ(p2.get_radius(), distance);
+  return F * dir;
+}
+vec2 Particle::LJ_force(const Wall &wall) {
+  vec2 dir = this->look_at(closest_point_on_wall(wall));
+  double distance = glm::length(dir);
+  dir = glm::normalize(dir);
+  double F = F_LJ(this->rad, distance);
   return F * dir;
 }
 vec2 Particle::gravity_force(const Particle &p2) {
@@ -142,7 +153,7 @@ vec2 Particle::gravity_force(const Particle &p2) {
 }
 void Particle::add_force(const vec2 &F) { this->force += F; }
 void Particle::reset_force() { this->force = O_; }
-void Particle::interact(const Particle &p2) {
+void Particle::interact_with_particle(const Particle &p2) {
   this->add_force(this->LJ_force(p2));
 }
 
