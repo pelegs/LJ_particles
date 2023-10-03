@@ -49,19 +49,20 @@ int main(int argc, char *argv[]) {
 
   ParticleSystem particle_system(width, height);
   double x, y;
-  vec2 v = O_;
-  double r;
+  double r=2.0;
   for (int id = 0; id < num_particles; id++) {
-    v = glm::diskRand(250.0);
-    r = glm::linearRand(1.0, max_radius);
     particle_system.add_particle(
-        new Particle(id, grid_points[id], v, r*5.0, r, r+5.0));
+        new Particle(id, grid_points[id], O_, r*5.0, r, r+3.0));
   }
+  particle_system.get_particle(25)->set_mass(100.0);
+  particle_system.get_particle(25)->set_radius(10.0);
+  particle_system.get_particle(25)->set_bounding_distance(17.0);
+  particle_system.get_particle(25)->set_vel(40.0, -65.0);
 
   for (int step = 0; step < num_steps; step++)
     particle_system.move_particles(dt, true);
 
-  particle_system.save_data(filename, true, true, true, true, false);
+  particle_system.save_data(filename, true, true, false, false, false);
 
   return 0;
 }

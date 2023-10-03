@@ -3,6 +3,7 @@
 #include "otherfuncs.hpp"
 #include "physics.hpp"
 #include <algorithm>
+#include <glm/gtx/closest_point.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <set>
 
@@ -79,6 +80,10 @@ void Particle::set_mass(const double &m) {
   this->mass_inv = 1.0 / m;
 }
 void Particle::set_radius(const double &r) { this->rad = r; }
+void Particle::set_bounding_distance(const double &d) {
+  this->bounding_distance = d;
+  this->set_bounding_points();
+}
 void Particle::set_bounding_points() {
   vec2 min_point = this->pos - this->bounding_distance;
   vec2 max_point = this->pos + this->bounding_distance;
@@ -91,6 +96,21 @@ void Particle::set_bounding_points() {
 vec2 Particle::connect(const Particle &p2) { return p2.get_pos() - this->pos; }
 vec2 Particle::look_at(const Particle &p2) {
   return glm::normalize(this->connect(p2));
+}
+
+// Particle-wall related
+vec2 Particle::closest_point_on_wall(const Wall &wall) {
+  return glm::closestPointOnLine(this->pos, wall.get_p0(), wall.get_p1());
+}
+double Particle::distance_to_wall(const Wall &wall) {
+  return glm::distance(this->pos, this->closest_point_on_wall(wall)) -
+         this->rad;
+}
+bool Particle::check_collision_with_wall(const Wall &wall, double atol) {
+  return this->distance_to_wall(wall) <= atol;
+}
+void Particle::bounce_from_wall(const Wall &wall){
+  this->vel = glm::reflect(this->vel, wall.get_normal());
 }
 
 // Checkers

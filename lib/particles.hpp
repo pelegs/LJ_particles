@@ -2,6 +2,7 @@
 #define PARTICLES
 
 #include "maths.hpp"
+#include "wall.hpp"
 #include <set>
 
 const int MIN_BB = 0;
@@ -45,11 +46,18 @@ public:
   void set_vel(const double &vx, const double &vy);
   void set_mass(const double &m);
   void set_radius(const double &r);
+  void set_bounding_distance(const double &d);
   void set_bounding_points();
 
   // Direction between two particles
   vec2 connect(const Particle &p2);
   vec2 look_at(const Particle &p2);
+
+  // Particle-wall related
+  vec2 closest_point_on_wall(const Wall &wall);
+  double distance_to_wall(const Wall &wall);
+  bool check_collision_with_wall(const Wall &wall, double atol);
+  void bounce_from_wall(const Wall &wall);
 
   // Checkers (add neighbor checks
   void check_wall_collision(const double &width, const double &height);

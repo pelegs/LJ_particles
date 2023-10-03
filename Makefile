@@ -13,7 +13,10 @@ physics: maths
 otherfuncs:
 	$(COMPILER) -c $(LIBFOLDER)/otherfuncs.cpp -o $(LIBFOLDER)/otherfuncs.o --std=$(STD)
 
-particles: physics otherfuncs
+wall:
+	$(COMPILER) -c $(LIBFOLDER)/wall.cpp -o $(LIBFOLDER)/wall.o --std=$(STD)
+
+particles: physics otherfuncs wall
 	$(COMPILER) -c $(LIBFOLDER)/particles.cpp -o $(LIBFOLDER)/particles.o --std=$(STD)
 
 particle_system: particles
@@ -26,7 +29,7 @@ main:
 	$(COMPILER) main.cpp -o main --std=$(STD)
 
 all: physics otherfuncs particle_system spring
-	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LIBFOLDER)/otherfuncs.o $(LIBFOLDER)/particles.o $(LIBFOLDER)/particle_system.o $(LIBFOLDER)/spring.o $(LDFLAGS) --std=$(STD)
+	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LIBFOLDER)/otherfuncs.o $(LIBFOLDER)/particles.o $(LIBFOLDER)/wall.o $(LIBFOLDER)/particle_system.o $(LIBFOLDER)/spring.o $(LDFLAGS) --std=$(STD)
 
 debug:
 	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LDFLAGS) --std=$(STD) -g

@@ -12,7 +12,6 @@
 #define assertm(exp, msg)                                                      \
   assert(((void)msg, exp)) // use (void) to silence unused warnings
 
-
 typedef glm::vec<2, double> vec2;
 typedef glm::mat<2, 2, double> mat22;
 typedef std::vector<std::vector<int>> int_mat;
@@ -57,5 +56,8 @@ template <typename T> std::vector<double> linspace(T, T, int);
 // 1D distance is defined so that there's no need to use expensive squares and
 // square root in the case of distances in a single axis.
 double distance1D(double, double);
+
+// Perpendicular to a vec2
+vec2 perp2d(const vec2 &vec);
 
 #endif // !MATHS

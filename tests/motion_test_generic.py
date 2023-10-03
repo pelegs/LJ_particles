@@ -26,8 +26,8 @@ radii = data["radii"]
 num_particles = trajectories.shape[1]
 num_frames = trajectories.shape[0]
 width, height = data["space_dimensions"]
-neighbors_matrix = data["neighbors_matrix"][::skip]
-bounding_distances = data["bounding_distances"]
+# neighbors_matrix = data["neighbors_matrix"][::skip]
+# bounding_distances = data["bounding_distances"]
 # forces = data["forces"]
 
 if "AABB_min" in data:
