@@ -22,6 +22,7 @@ public:
   // void remove_particle();
   Particle *get_particle(int i);
   std::vector<Particle *> get_particle_list();
+  std::vector<Wall *> get_wall_list();
 
   // Wall managment
   void add_wall(Wall *wall);

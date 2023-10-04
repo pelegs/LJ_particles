@@ -42,6 +42,7 @@ Particle *ParticleSystem::get_particle(int i) { return this->particle_list[i]; }
 std::vector<Particle *> ParticleSystem::get_particle_list() {
   return this->particle_list;
 }
+std::vector<Wall *> ParticleSystem::get_wall_list() { return this->walls; }
 
 // Wall managment
 void ParticleSystem::add_wall(Wall *wall) { this->walls.push_back(wall); }
@@ -111,16 +112,16 @@ void ParticleSystem::calc_new_positions(const double &dt,
   for (auto &p : this->particle_list) {
     p->calc_new_pos(dt);
     // Data vectors update (more will be here soon)
-    if (update_trajectories_data) {
-      this->trajectories.push_back(p->get_x());
-      this->trajectories.push_back(p->get_y());
-    }
-    if (update_AABB) {
-      this->AABB_min.push_back(p->get_min_AABB(X_AX));
-      this->AABB_min.push_back(p->get_min_AABB(Y_AX));
-      this->AABB_max.push_back(p->get_max_AABB(X_AX));
-      this->AABB_max.push_back(p->get_max_AABB(Y_AX));
-    }
+    // if (update_trajectories_data) {
+    //   this->trajectories.push_back(p->get_x());
+    //   this->trajectories.push_back(p->get_y());
+    // }
+    // if (update_AABB) {
+    //   this->AABB_min.push_back(p->get_min_AABB(X_AX));
+    //   this->AABB_min.push_back(p->get_min_AABB(Y_AX));
+    //   this->AABB_max.push_back(p->get_max_AABB(X_AX));
+    //   this->AABB_max.push_back(p->get_max_AABB(Y_AX));
+    // }
   }
   this->num_steps++;
 }
@@ -144,7 +145,8 @@ void ParticleSystem::interact(bool LJ = false, bool gravity = false,
       for (auto &neighbor : particle->get_neighbors_list())
         particle->interact_with_particle(*neighbor);
       for (auto &wall : this->walls) {
-        if (particle->check_collision_with_wall(*wall, particle->get_radius()*3.0))
+        if (particle->check_collision_with_wall(*wall,
+                                                particle->get_radius() * 3.0))
           particle->interact_with_wall(*wall);
       }
     }

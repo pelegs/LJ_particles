@@ -50,23 +50,26 @@ int main(int argc, char *argv[]) {
 
   ParticleSystem particle_system(width, height);
   double x, y;
-  double r = 10.0;
+  double r = 7.0;
   for (int id = 0; id < num_particles; id++) {
-    particle_system.add_particle(new Particle(id, grid_points[id], O_, r * 5.0,
-                                              r, r + 3.0, sf::Color::Green));
+    particle_system.add_particle(
+        new Particle(id, grid_points[id], O_, r, r, 15.0, sf::Color::Green));
   }
-  particle_system.get_particle(25)->set_mass(25.0);
-  particle_system.get_particle(25)->set_radius(20.0);
-  particle_system.get_particle(25)->set_bounding_distance(17.0);
-  particle_system.get_particle(25)->set_vel(-40.0, 65.0);
+  particle_system.get_particle(5)->set_mass(20.0);
+  particle_system.get_particle(5)->set_radius(20.0);
+  particle_system.get_particle(5)->set_bounding_distance(30.0);
+  particle_system.get_particle(5)->set_vel(-140.0, 65.0);
 
   particle_system.add_wall(new Wall(vec2(width, 0.), vec2(0., 0.)));
   particle_system.add_wall(new Wall(vec2(0., 0.), vec2(0., height)));
   particle_system.add_wall(new Wall(vec2(width, 0.), vec2(width, height)));
   particle_system.add_wall(new Wall(vec2(0., height), vec2(width, height)));
-  particle_system.add_wall(new Wall(vec2(0.0, 0.0), vec2(width, height)));
+  particle_system.add_wall(
+      new Wall(vec2(width / 2.0, 100.0), vec2(width / 2.0, height - 100.0)));
 
   // Set up SFML window
+  sf::Vertex line[] = {sf::Vertex(sf::Vector2f(0.0, 0.0)),
+                       sf::Vertex(sf::Vector2f(0.0, 0.0))};
   int intWidth = (int)width, intHeight = (int)height;
   sf::RenderWindow window(sf::VideoMode(intWidth, intHeight),
                           "SFML graphics test");
@@ -85,6 +88,12 @@ int main(int argc, char *argv[]) {
     window.clear();
     for (auto particle : particle_system.get_particle_list()) {
       window.draw(particle->get_shape());
+    }
+    for (auto wall : particle_system.get_wall_list()) {
+      std::array<sf::Vertex, 2> wall_lines =
+          wall->get_vertices(); // this is horrible hack that must be corrected
+      sf::Vertex line[] = {wall_lines[0], wall_lines[1]};
+      window.draw(line, 2, sf::Lines);
     }
     window.display();
   }
