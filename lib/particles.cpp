@@ -20,11 +20,15 @@ Particle::Particle() {
   bounding_distance = 10.0;
   this->set_bounding_points();
   this->reset_neighbors();
+
+  // Graphics
+  this->color = sf::Color::White;
+  this->sphere_object = sf::CircleShape(this->rad);
 }
 
 Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
                    const double &mass, const double &rad,
-                   const double &bounding_distance) {
+                   const double &bounding_distance, const sf::Color &color) {
   this->id = id;
   this->pos = pos;
   this->vel = vel;
@@ -34,6 +38,10 @@ Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
   this->bounding_distance = bounding_distance;
   this->set_bounding_points();
   this->reset_neighbors();
+
+  // Graphics
+  this->color = color;
+  this->sphere_object = sf::CircleShape(this->rad);
 }
 
 Particle::~Particle() { this->reset_neighbors(); }
@@ -64,6 +72,7 @@ std::set<Particle *> Particle::get_neighbors_list() const {
 }
 std::set<Particle *> Particle::get_neighbors_x() { return this->neighbors_x; }
 std::set<Particle *> Particle::get_neighbors_y() { return this->neighbors_y; }
+sf::CircleShape Particle::get_shape() { return this->sphere_object; }
 
 // General setters
 void Particle::set_pos(const double &x, const double &y) {
@@ -95,7 +104,7 @@ void Particle::set_bounding_points() {
 // Direction between two particles
 vec2 Particle::connect(const Particle &p2) { return p2.get_pos() - this->pos; }
 vec2 Particle::look_at(const vec2 &pt) {
-  return glm::normalize(pt-this->pos);
+  return glm::normalize(pt - this->pos);
 }
 vec2 Particle::look_at(const Particle &p2) {
   return glm::normalize(this->connect(p2));
@@ -112,7 +121,7 @@ double Particle::distance_to_wall(const Wall &wall) {
 bool Particle::check_collision_with_wall(const Wall &wall, double atol) {
   return this->distance_to_wall(wall) <= atol;
 }
-void Particle::interact_with_wall(const Wall &wall){
+void Particle::interact_with_wall(const Wall &wall) {
   // this->vel = glm::reflect(this->vel, wall.get_normal());
   this->add_force(this->LJ_force(wall));
 }
@@ -139,7 +148,7 @@ vec2 Particle::LJ_force(const Wall &wall) {
   vec2 dir = this->look_at(closest_point_on_wall(wall));
   double distance = glm::length(dir);
   dir = glm::normalize(dir);
-  double F = 0.1*F_LJ(0.75, distance);
+  double F = 0.1 * F_LJ(0.75, distance);
   return F * dir;
 }
 vec2 Particle::gravity_force(const Particle &p2) {
@@ -161,6 +170,7 @@ void Particle::interact_with_particle(const Particle &p2) {
 void Particle::calc_new_pos(const double &dt) {
   this->pos += this->vel * dt + 0.5 * this->acc * dt * dt;
   this->set_bounding_points();
+  this->update_shape();
 }
 void Particle::calc_acc() {
   this->acc_prev = this->acc;
@@ -203,6 +213,15 @@ std::vector<int> Particle::neighbor_ids() {
   }
   return ids;
 }
+
+// Graphics
+void Particle::update_shape() {
+  double x = this->pos[X_AX];
+  double y = this->pos[Y_AX];
+  this->sphere_object.setPosition(x, y);
+}
+
+// --------------------------------------------- //
 
 CompareParticlesAABB::CompareParticlesAABB(int ax) { this->axis = ax; }
 bool CompareParticlesAABB::operator()(const Particle *p1, const Particle *p2) {

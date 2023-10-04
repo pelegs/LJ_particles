@@ -1,4 +1,5 @@
 #include "cnpy.h"
+#include <SFML/Graphics.hpp>
 #include <cassert>
 #include <glm/ext/matrix_transform.hpp>
 #include <indicators/progress_bar.hpp>
@@ -49,13 +50,13 @@ int main(int argc, char *argv[]) {
 
   ParticleSystem particle_system(width, height);
   double x, y;
-  double r=2.0;
+  double r = 10.0;
   for (int id = 0; id < num_particles; id++) {
-    particle_system.add_particle(
-        new Particle(id, grid_points[id], O_, r*5.0, r, r+3.0));
+    particle_system.add_particle(new Particle(id, grid_points[id], O_, r * 5.0,
+                                              r, r + 3.0, sf::Color::Green));
   }
   particle_system.get_particle(25)->set_mass(25.0);
-  particle_system.get_particle(25)->set_radius(10.0);
+  particle_system.get_particle(25)->set_radius(20.0);
   particle_system.get_particle(25)->set_bounding_distance(17.0);
   particle_system.get_particle(25)->set_vel(-40.0, 65.0);
 
@@ -65,10 +66,26 @@ int main(int argc, char *argv[]) {
   particle_system.add_wall(new Wall(vec2(0., height), vec2(width, height)));
   particle_system.add_wall(new Wall(vec2(0.0, 0.0), vec2(width, height)));
 
-  for (int step = 0; step < num_steps; step++)
+  // Set up SFML window
+  int intWidth = (int)width, intHeight = (int)height;
+  sf::RenderWindow window(sf::VideoMode(intWidth, intHeight),
+                          "SFML graphics test");
+
+  while (window.isOpen()) {
+    sf::Event event;
+    while (window.pollEvent(event)) {
+      if (event.type == sf::Event::Closed)
+        window.close();
+    }
+
+    // Dynamics
     particle_system.move_particles(dt, true);
 
-  particle_system.save_data(filename, true, true, false, false, false);
-
-  return 0;
+    // Draw
+    window.clear();
+    for (auto particle : particle_system.get_particle_list()) {
+      window.draw(particle->get_shape());
+    }
+    window.display();
+  }
 }

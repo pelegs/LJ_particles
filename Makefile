@@ -25,11 +25,11 @@ particle_system: particles
 spring: particles
 	$(COMPILER) -c $(LIBFOLDER)/spring.cpp -o $(LIBFOLDER)/spring.o --std=$(STD)
 
-main:
-	$(COMPILER) main.cpp -o main --std=$(STD)
+main: physics otherfuncs particle_system spring
+	$(COMPILER) -c main.cpp --std=$(STD)
 
-all: physics otherfuncs particle_system spring
-	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LIBFOLDER)/otherfuncs.o $(LIBFOLDER)/particles.o $(LIBFOLDER)/wall.o $(LIBFOLDER)/particle_system.o $(LIBFOLDER)/spring.o $(LDFLAGS) --std=$(STD)
+all: physics otherfuncs particle_system spring main
+	$(COMPILER) main.o -o LJ_sim -lsfml-graphics -lsfml-window -lsfml-system $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LIBFOLDER)/otherfuncs.o $(LIBFOLDER)/particles.o $(LIBFOLDER)/wall.o $(LIBFOLDER)/particle_system.o $(LIBFOLDER)/spring.o $(LDFLAGS) --std=$(STD)
 
 debug:
 	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LDFLAGS) --std=$(STD) -g

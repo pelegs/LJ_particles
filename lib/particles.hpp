@@ -3,6 +3,7 @@
 
 #include "maths.hpp"
 #include "wall.hpp"
+#include <SFML/Graphics.hpp> // this will be replaced with a dedicated SFML library
 #include <set>
 
 const int MIN_BB = 0;
@@ -15,11 +16,13 @@ class Particle {
   std::vector<vec2> bounding_points;
   double mass, mass_inv, rad;
   std::set<Particle *> neighbors_x, neighbors_y, neighbors;
+  sf::Color color;
+  sf::CircleShape sphere_object;
 
 public:
   Particle();
   Particle(const int &id, const vec2 &pos, const vec2 &vel, const double &mass,
-           const double &rad, const double &bounding_distance);
+           const double &rad, const double &bounding_distance, const sf::Color &color);
   ~Particle();
 
   // Getters
@@ -40,6 +43,7 @@ public:
   std::set<Particle *> get_neighbors_list() const;
   std::set<Particle *> get_neighbors_x();
   std::set<Particle *> get_neighbors_y();
+  sf::CircleShape get_shape();
 
   // Setters
   void set_pos(const double &x, const double &y);
@@ -81,6 +85,9 @@ public:
   void add_neighbor(int axis, Particle *neighbor);
   void generate_neighbors_list_by_intersection();
   std::vector<int> neighbor_ids();
+
+  // Graphics realted
+  void update_shape();
 };
 
 struct CompareParticlesAABB {
