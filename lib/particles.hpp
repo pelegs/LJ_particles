@@ -5,6 +5,7 @@
 #include "wall.hpp"
 #include <SFML/Graphics.hpp> // this will be replaced with a dedicated SFML library
 #include <set>
+#include <algorithm>
 
 const int MIN_BB = 0;
 const int MAX_BB = 1;
@@ -52,6 +53,7 @@ public:
   void set_radius(const double &r);
   void set_bounding_distance(const double &d);
   void set_bounding_points();
+  void set_color(const sf::Color color);
 
   // Direction between two particles
   vec2 connect(const Particle &p2);
@@ -71,7 +73,7 @@ public:
   vec2 LJ_force(const Particle &p2);
   vec2 LJ_force(const Wall &wall);
   vec2 gravity_force(const Particle &p2);
-  void add_force(const vec2 &F);
+  void add_force(const vec2 &F, double max);
   void reset_force();
   void interact_with_particle(const Particle &p2);
 

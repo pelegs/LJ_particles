@@ -7,16 +7,20 @@ ParticleSystem::ParticleSystem() {
   this->num_particles = 0;
   this->num_steps = 0;
   this->particle_list.clear();
-  this->AABB_min.clear();
-  this->AABB_max.clear();
+  this->spring_list.clear();
+  this->wall_list.clear();
+  // this->AABB_min.clear();
+  // this->AABB_max.clear();
 }
 
 ParticleSystem::ParticleSystem(double width, double height) {
   this->num_particles = 0;
   this->num_steps = 0;
   this->particle_list.clear();
-  this->AABB_min.clear();
-  this->AABB_max.clear();
+  this->spring_list.clear();
+  this->wall_list.clear();
+  // this->AABB_min.clear();
+  // this->AABB_max.clear();
   this->space_dimensions = vec2(width, height);
 }
 
@@ -42,10 +46,14 @@ Particle *ParticleSystem::get_particle(int i) { return this->particle_list[i]; }
 std::vector<Particle *> ParticleSystem::get_particle_list() {
   return this->particle_list;
 }
-std::vector<Wall *> ParticleSystem::get_wall_list() { return this->walls; }
+std::vector<Spring *> ParticleSystem::get_spring_list() { return this->spring_list; }
+std::vector<Wall *> ParticleSystem::get_wall_list() { return this->wall_list; }
 
 // Wall managment
-void ParticleSystem::add_wall(Wall *wall) { this->walls.push_back(wall); }
+void ParticleSystem::add_wall(Wall *wall) { this->wall_list.push_back(wall); }
+
+// Springs
+void ParticleSystem::add_spring(Spring *spring) { this->spring_list.push_back(spring); }
 
 // Collision detection
 void ParticleSystem::reset_neighbors() {
@@ -63,11 +71,11 @@ void ParticleSystem::sort_particles_all_directions() {
   this->sort_particles_by_min_AABB(Y_AX);
 
   // temp
-  for (auto particle : this->particle_list_sorted[X_AX])
-    this->sorted_particle_ids_X.push_back(particle->get_id());
-
-  for (auto particle : this->particle_list_sorted[Y_AX])
-    this->sorted_particle_ids_Y.push_back(particle->get_id());
+  // for (auto particle : this->particle_list_sorted[X_AX])
+  //   this->sorted_particle_ids_X.push_back(particle->get_id());
+  //
+  // for (auto particle : this->particle_list_sorted[Y_AX])
+  //   this->sorted_particle_ids_Y.push_back(particle->get_id());
 }
 
 void ParticleSystem::assign_neighbors_by_axis(int axis) {
@@ -99,7 +107,7 @@ void ParticleSystem::assign_neighbors() {
 
 void ParticleSystem::interact_with_walls(double atol = 0.01) {
   for (auto &particle : this->particle_list)
-    for (auto wall : this->walls)
+    for (auto wall : this->wall_list)
       if (particle->check_collision_with_wall(*wall, atol)) {
         particle->interact_with_wall(*wall);
       }
@@ -144,17 +152,17 @@ void ParticleSystem::interact(bool LJ = false, bool gravity = false,
     if (LJ) {
       for (auto &neighbor : particle->get_neighbors_list())
         particle->interact_with_particle(*neighbor);
-      for (auto &wall : this->walls) {
+      for (auto &wall : this->wall_list) {
         if (particle->check_collision_with_wall(*wall,
                                                 particle->get_radius() * 3.0))
           particle->interact_with_wall(*wall);
       }
     }
-
-    double Fx = particle->get_force()[X_AX];
-    double Fy = particle->get_force()[Y_AX];
-    this->forces.push_back(Fx);
-    this->forces.push_back(Fy);
+    if (springs) {
+      for (auto spring:this->spring_list) {
+        spring->apply_force();
+      }
+    }
   }
 }
 
@@ -166,7 +174,7 @@ void ParticleSystem::move_particles(const double &dt,
   this->assign_neighbors();
   this->update_neighbors_matrix();
   if (with_interactions) {
-    this->interact(true);
+    this->interact(true, false, true);
     this->calc_accelerations();
     this->calc_new_velocities(dt);
   }
@@ -179,8 +187,8 @@ void ParticleSystem::update_neighbors_matrix() {
     std::fill(neighbors_row.begin(), neighbors_row.end(), 0);
     for (auto neighbor : particle->get_neighbors_list())
       neighbors_row[neighbor->get_id()] = 1;
-    this->neighbors_matrix.insert(this->neighbors_matrix.end(),
-                                  neighbors_row.begin(), neighbors_row.end());
+    // this->neighbors_matrix.insert(this->neighbors_matrix.end(),
+    // neighbors_row.begin(), neighbors_row.end());
   }
 }
 
@@ -211,15 +219,15 @@ void ParticleSystem::save_data(std::string filename,
   std::vector<unsigned long> params = {this->num_particles, this->num_steps};
   cnpy::npz_save(filename, "parameters", &params[0], {2}, "a");
 
-  if (this->trajectories.size()) {
-    cnpy::npz_save(filename, "trajectories", &this->trajectories[0],
-                   {this->num_steps, this->num_particles, 2}, "a");
-  }
-
-  if (this->trajectories.size()) {
-    cnpy::npz_save(filename, "trajectories", &this->trajectories[0],
-                   {this->num_steps, this->num_particles, 2}, "a");
-  }
+  // if (this->trajectories.size()) {
+  //   cnpy::npz_save(filename, "trajectories", &this->trajectories[0],
+  //                  {this->num_steps, this->num_particles, 2}, "a");
+  // }
+  //
+  // if (this->trajectories.size()) {
+  //   cnpy::npz_save(filename, "trajectories", &this->trajectories[0],
+  //                  {this->num_steps, this->num_particles, 2}, "a");
+  // }
 
   if (save_particle_data) {
     std::vector<double> masses;
@@ -231,7 +239,7 @@ void ParticleSystem::save_data(std::string filename,
       radii.push_back(particle->get_radius());
       bounding_distances.push_back(particle->get_bounding_distance());
     }
-    for (auto wall : this->walls) {
+    for (auto wall : this->wall_list) {
       walls.push_back(wall->get_p0()[X_AX]);
       walls.push_back(wall->get_p0()[Y_AX]);
       walls.push_back(wall->get_p1()[X_AX]);
@@ -242,31 +250,31 @@ void ParticleSystem::save_data(std::string filename,
     cnpy::npz_save(filename, "bounding_distances", &bounding_distances[0],
                    {this->num_particles}, "a");
     cnpy::npz_save(filename, "walls_data", &walls[0],
-                   {this->walls.size(), 2, 2}, "a");
+                   {this->wall_list.size(), 2, 2}, "a");
   }
 
-  if (save_neighbor_matrix && this->neighbors_matrix.size()) {
-    cnpy::npz_save(filename, "neighbors_matrix", &this->neighbors_matrix[0],
-                   {this->num_steps, this->num_particles, this->num_particles},
-                   "a");
-  }
-
-  if (save_sort_data) {
-    cnpy::npz_save(filename, "sort_by_x", &this->sorted_particle_ids_X[0],
-                   {this->num_steps, this->num_particles}, "a");
-    cnpy::npz_save(filename, "sort_by_y", &this->sorted_particle_ids_Y[0],
-                   {this->num_steps, this->num_particles}, "a");
-  }
-
-  if (save_AABB_data) {
-    cnpy::npz_save(filename, "AABB_min", &this->AABB_min[0],
-                   {this->num_steps, this->num_particles, 2}, "a");
-    cnpy::npz_save(filename, "AABB_max", &this->AABB_max[0],
-                   {this->num_steps, this->num_particles, 2}, "a");
-  }
-
-  if (save_forces) {
-    cnpy::npz_save(filename, "forces", &this->forces[0],
-                   {this->num_steps, this->num_particles, 2}, "a");
-  }
+  // if (save_neighbor_matrix && this->neighbors_matrix.size()) {
+  //   cnpy::npz_save(filename, "neighbors_matrix", &this->neighbors_matrix[0],
+  //                  {this->num_steps, this->num_particles,
+  //                  this->num_particles}, "a");
+  // }
+  //
+  // if (save_sort_data) {
+  //   cnpy::npz_save(filename, "sort_by_x", &this->sorted_particle_ids_X[0],
+  //                  {this->num_steps, this->num_particles}, "a");
+  //   cnpy::npz_save(filename, "sort_by_y", &this->sorted_particle_ids_Y[0],
+  //                  {this->num_steps, this->num_particles}, "a");
+  // }
+  //
+  // if (save_AABB_data) {
+  //   cnpy::npz_save(filename, "AABB_min", &this->AABB_min[0],
+  //                  {this->num_steps, this->num_particles, 2}, "a");
+  //   cnpy::npz_save(filename, "AABB_max", &this->AABB_max[0],
+  //                  {this->num_steps, this->num_particles, 2}, "a");
+  // }
+  //
+  // if (save_forces) {
+  //   cnpy::npz_save(filename, "forces", &this->forces[0],
+  //                  {this->num_steps, this->num_particles, 2}, "a");
+  // }
 }

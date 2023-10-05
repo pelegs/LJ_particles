@@ -19,6 +19,12 @@ void Spring::get_data() {
             << this->p2->get_id() << std::endl;
 }
 
+Particle *Spring::get_particle(int id) {
+  if (id == 0)
+    return this->p1;
+  return p2;
+}
+
 double Spring::particles_distance() {
   return glm::distance(this->p1->get_pos(), this->p2->get_pos());
 }
@@ -32,6 +38,6 @@ void Spring::apply_force() {
   double x = this->particles_distance();
   vec2 F12 = F_HOOK(this->K, x, this->L) * dr;
   vec2 F21 = -1.0 * F12;
-  this->p1->add_force(F12);
-  this->p2->add_force(F21);
+  this->p1->add_force(F12, MAX_FORCE);
+  this->p2->add_force(F21, MAX_FORCE);
 }

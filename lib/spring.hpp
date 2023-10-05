@@ -13,6 +13,7 @@ class Spring {
 public:
   Spring(Particle &p1, Particle &p2, double K, double L);
   void get_data();
+  Particle *get_particle(int id);
   double particles_distance();
   double hook_force(double x);
   void apply_force();

@@ -1,5 +1,6 @@
 #include "cnpy.h"
 #include "particles.hpp"
+#include "spring.hpp"
 #include <vector>
 
 class ParticleSystem {
@@ -7,10 +8,11 @@ class ParticleSystem {
   vec2 space_dimensions;
   std::vector<Particle *> particle_list = {};
   std::vector<Particle *> particle_list_sorted[2];
-  std::vector<Wall *> walls = {};
-  std::vector<double> trajectories = {}, AABB_min = {}, AABB_max = {}, forces = {};
-  std::vector<int> neighbors_matrix = {};
-  std::vector<int> sorted_particle_ids_X, sorted_particle_ids_Y; // temp
+  std::vector<Spring *> spring_list = {};
+  std::vector<Wall *> wall_list = {};
+  // std::vector<double> trajectories = {}, AABB_min = {}, AABB_max = {}, forces = {};
+  // std::vector<int> neighbors_matrix = {};
+  // std::vector<int> sorted_particle_ids_X, sorted_particle_ids_Y; // temp
 
 public:
   ParticleSystem();
@@ -22,10 +24,14 @@ public:
   // void remove_particle();
   Particle *get_particle(int i);
   std::vector<Particle *> get_particle_list();
+  std::vector<Spring *> get_spring_list();
   std::vector<Wall *> get_wall_list();
 
   // Wall managment
   void add_wall(Wall *wall);
+
+  // Spring managment
+  void add_spring(Spring *spring);
 
   // Collision detection
   void reset_neighbors();

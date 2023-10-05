@@ -24,6 +24,7 @@ Particle::Particle() {
   // Graphics
   this->color = sf::Color::White;
   this->sphere_object = sf::CircleShape(this->rad);
+  this->sphere_object.setFillColor(this->color);
 }
 
 Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
@@ -42,6 +43,7 @@ Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
   // Graphics
   this->color = color;
   this->sphere_object = sf::CircleShape(this->rad);
+  this->sphere_object.setFillColor(this->color);
 }
 
 Particle::~Particle() { this->reset_neighbors(); }
@@ -100,6 +102,10 @@ void Particle::set_bounding_points() {
   this->bounding_points.push_back(min_point);
   this->bounding_points.push_back(max_point);
 }
+void Particle::set_color(const sf::Color color) {
+  this->color = color;
+  this->sphere_object.setFillColor(color);
+}
 
 // Direction between two particles
 vec2 Particle::connect(const Particle &p2) { return p2.get_pos() - this->pos; }
@@ -123,7 +129,7 @@ bool Particle::check_collision_with_wall(const Wall &wall, double atol) {
 }
 void Particle::interact_with_wall(const Wall &wall) {
   // this->vel = glm::reflect(this->vel, wall.get_normal());
-  this->add_force(this->LJ_force(wall));
+  this->add_force(this->LJ_force(wall), MAX_FORCE);
 }
 
 // Checkers
@@ -160,10 +166,15 @@ vec2 Particle::gravity_force(const Particle &p2) {
   double F = GRAV * p2.get_mass() * this->mass / distance2;
   return F * dir;
 }
-void Particle::add_force(const vec2 &F) { this->force += F; }
+void Particle::add_force(const vec2 &F, double max = -1.0) {
+  vec2 actual_F = F;
+  if (max >= 0. && glm::length2(F) > std::pow(max, 2.0))
+    actual_F = glm::normalize(F) * max;
+  this->force += actual_F;
+}
 void Particle::reset_force() { this->force = O_; }
 void Particle::interact_with_particle(const Particle &p2) {
-  this->add_force(this->LJ_force(p2));
+  this->add_force(this->LJ_force(p2), MAX_FORCE);
 }
 
 // Velocity Verlet?..
