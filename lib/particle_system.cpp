@@ -46,14 +46,18 @@ Particle *ParticleSystem::get_particle(int i) { return this->particle_list[i]; }
 std::vector<Particle *> ParticleSystem::get_particle_list() {
   return this->particle_list;
 }
-std::vector<Spring *> ParticleSystem::get_spring_list() { return this->spring_list; }
+std::vector<Spring *> ParticleSystem::get_spring_list() {
+  return this->spring_list;
+}
 std::vector<Wall *> ParticleSystem::get_wall_list() { return this->wall_list; }
 
 // Wall managment
 void ParticleSystem::add_wall(Wall *wall) { this->wall_list.push_back(wall); }
 
 // Springs
-void ParticleSystem::add_spring(Spring *spring) { this->spring_list.push_back(spring); }
+void ParticleSystem::add_spring(Spring *spring) {
+  this->spring_list.push_back(spring);
+}
 
 // Collision detection
 void ParticleSystem::reset_neighbors() {
@@ -69,13 +73,6 @@ void ParticleSystem::sort_particles_by_min_AABB(int axis) {
 void ParticleSystem::sort_particles_all_directions() {
   this->sort_particles_by_min_AABB(X_AX);
   this->sort_particles_by_min_AABB(Y_AX);
-
-  // temp
-  // for (auto particle : this->particle_list_sorted[X_AX])
-  //   this->sorted_particle_ids_X.push_back(particle->get_id());
-  //
-  // for (auto particle : this->particle_list_sorted[Y_AX])
-  //   this->sorted_particle_ids_Y.push_back(particle->get_id());
 }
 
 void ParticleSystem::assign_neighbors_by_axis(int axis) {
@@ -100,8 +97,8 @@ void ParticleSystem::assign_neighbors() {
   this->assign_neighbors_by_axis(Y_AX);
   for (auto &particle : this->particle_list) {
     particle->generate_neighbors_list_by_intersection();
-    for (auto &neighor : particle->get_neighbors_list())
-      neighor->add_neighbor(ALL_AXES, particle);
+    // for (auto &neighor : particle->get_neighbors_list())
+    //   neighor->add_neighbor(ALL_AXES, particle);
   }
 }
 
@@ -117,20 +114,8 @@ void ParticleSystem::interact_with_walls(double atol = 0.01) {
 void ParticleSystem::calc_new_positions(const double &dt,
                                         const bool &update_trajectories_data,
                                         const bool &update_AABB) {
-  for (auto &p : this->particle_list) {
+  for (auto &p : this->particle_list)
     p->calc_new_pos(dt);
-    // Data vectors update (more will be here soon)
-    // if (update_trajectories_data) {
-    //   this->trajectories.push_back(p->get_x());
-    //   this->trajectories.push_back(p->get_y());
-    // }
-    // if (update_AABB) {
-    //   this->AABB_min.push_back(p->get_min_AABB(X_AX));
-    //   this->AABB_min.push_back(p->get_min_AABB(Y_AX));
-    //   this->AABB_max.push_back(p->get_max_AABB(X_AX));
-    //   this->AABB_max.push_back(p->get_max_AABB(Y_AX));
-    // }
-  }
   this->num_steps++;
 }
 
@@ -148,10 +133,12 @@ void ParticleSystem::calc_new_velocities(const double &dt) {
 
 void ParticleSystem::interact(bool LJ = false, bool gravity = false,
                               bool springs = false) {
-  for (auto particle : this->particle_list) {
+  for (auto &particle : this->particle_list) {
     if (LJ) {
-      for (auto &neighbor : particle->get_neighbors_list())
+      for (auto &neighbor : particle->get_neighbors_list()) {
         particle->interact_with_particle(*neighbor);
+        // neighbor->interact_with_particle(*particle);
+      }
       for (auto &wall : this->wall_list) {
         if (particle->check_collision_with_wall(*wall,
                                                 particle->get_radius() * 3.0))
@@ -159,7 +146,7 @@ void ParticleSystem::interact(bool LJ = false, bool gravity = false,
       }
     }
     if (springs) {
-      for (auto spring:this->spring_list) {
+      for (auto spring : this->spring_list) {
         spring->apply_force();
       }
     }

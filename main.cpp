@@ -121,8 +121,8 @@ int main(int argc, char *argv[]) {
       vec2 p2_pos = spring->get_particle(1)->get_pos();
       double p1_rad = spring->get_particle(0)->get_radius();
       double p2_rad = spring->get_particle(1)->get_radius();
-      sf::Vertex spring_line[] = {sf::Vertex(sf::Vector2f(p1_pos.x+p1_rad, p1_pos.y+p1_rad)),
-                                  sf::Vertex(sf::Vector2f(p2_pos.x+p1_rad, p2_pos.y+p1_rad))};
+      sf::Vertex spring_line[] = {sf::Vertex(sf::Vector2f(p1_pos.x, p1_pos.y)),
+                                  sf::Vertex(sf::Vector2f(p2_pos.x, p2_pos.y))};
       window.draw(spring_line, 2, sf::Lines);
     }
 

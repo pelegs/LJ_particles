@@ -44,7 +44,7 @@ Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
 
   // Graphics
   this->color = color;
-  this->sphere_object = sf::CircleShape(this->rad);
+  this->sphere_object = sf::CircleShape(this->rad*0.75);
   this->sphere_object.setFillColor(this->color);
 }
 
@@ -249,7 +249,8 @@ std::vector<int> Particle::neighbor_ids() {
 void Particle::update_shape() {
   double x = this->pos[X_AX];
   double y = this->pos[Y_AX];
-  this->sphere_object.setPosition(x, y);
+  double r = this->rad;
+  this->sphere_object.setPosition(x-rad, y-rad);
 }
 
 // --------------------------------------------- //
