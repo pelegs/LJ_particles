@@ -15,7 +15,7 @@ class Particle {
   vec2 pos, vel, acc, acc_prev, force;
   double bounding_distance;
   std::vector<vec2> bounding_points;
-  double mass, mass_inv, rad;
+  double mass, mass_inv, rad, rad_eff;
   std::set<Particle *> neighbors_x, neighbors_y, neighbors;
   sf::Color color;
   sf::CircleShape sphere_object;
@@ -38,6 +38,7 @@ public:
   vec2 get_force() const;
   double get_mass() const;
   double get_radius() const;
+  double get_effective_radius() const;
   double get_bounding_distance() const;
   double get_min_AABB(int axis) const;
   double get_max_AABB(int axis) const;
@@ -72,6 +73,8 @@ public:
   // Force-related stuff
   vec2 LJ_force(const Particle &p2);
   vec2 LJ_force(const Wall &wall);
+  vec2 WCA_force(const Particle &p2);
+  vec2 WCA_force(const Wall &wall);
   vec2 gravity_force(const Particle &p2);
   void add_force(const vec2 &F, double max);
   void reset_force();

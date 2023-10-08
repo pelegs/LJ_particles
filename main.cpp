@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
   Particle *p2 = particle_system.get_particle(1);
   p1->set_color(sf::Color::Blue);
   p2->set_color(sf::Color::White);
-  // p1->set_vel(500.0, 150.0);
+  p1->set_vel(50.0, 15.0);
 
   // Add springs
   double L = glm::distance(p1->get_pos(), p2->get_pos());

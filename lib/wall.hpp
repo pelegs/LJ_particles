@@ -6,7 +6,7 @@
 
 class Wall {
   vec2 p0, p1, dir, normal;
-  double len;
+  double len, wca_dist, wca_dist_eff;
   std::array<sf::Vertex, 2> vertices;
 
 public:
@@ -19,5 +19,7 @@ public:
   vec2 get_dir() const;
   vec2 get_normal() const;
   double get_len() const;
+  double get_wca_dist() const;
+  double get_wca_dist_eff() const;
   std::array<sf::Vertex, 2> get_vertices() const;
 };

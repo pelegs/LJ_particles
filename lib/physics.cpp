@@ -24,6 +24,11 @@ double F_LJ(double S, double x) {
   return -24.0 * LJ_E * S_6 * (std::pow(x, 6.0) - 2 * S_6) * std::pow(x, -13.0);
 }
 
+double F_WCA(double S, double x, double x_critical) {
+  if ( x >= x_critical) return 0.0;
+  return -1.0*F_LJ(S, x);
+}
+
 double F_HOOK(double K, double x, double x0) {
   // Hook's law for a simple, non-damped spring.
   return -1.0 * K * (x - x0);

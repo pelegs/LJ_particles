@@ -17,6 +17,7 @@ Particle::Particle() {
   mass = 1.0;
   mass_inv = 1.0;
   rad = 1.0;
+  rad_eff = POW_2_1_6;
   bounding_distance = 10.0;
   this->set_bounding_points();
   this->reset_neighbors();
@@ -36,6 +37,7 @@ Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
   this->mass = mass;
   this->mass_inv = 1.0 / mass;
   this->rad = rad;
+  this->rad_eff = rad * POW_2_1_6;
   this->bounding_distance = bounding_distance;
   this->set_bounding_points();
   this->reset_neighbors();
@@ -60,6 +62,7 @@ vec2 Particle::get_acc() const { return this->acc; }
 vec2 Particle::get_force() const { return this->force; }
 double Particle::get_mass() const { return this->mass; }
 double Particle::get_radius() const { return this->rad; }
+double Particle::get_effective_radius() const { return this->rad_eff; }
 double Particle::get_bounding_distance() const {
   return this->bounding_distance;
 }
@@ -90,7 +93,10 @@ void Particle::set_mass(const double &m) {
   this->mass = m;
   this->mass_inv = 1.0 / m;
 }
-void Particle::set_radius(const double &r) { this->rad = r; }
+void Particle::set_radius(const double &r) { 
+  this->rad = r;
+  this->rad_eff = r * POW_2_1_6;
+}
 void Particle::set_bounding_distance(const double &d) {
   this->bounding_distance = d;
   this->set_bounding_points();
@@ -129,7 +135,7 @@ bool Particle::check_collision_with_wall(const Wall &wall, double atol) {
 }
 void Particle::interact_with_wall(const Wall &wall) {
   // this->vel = glm::reflect(this->vel, wall.get_normal());
-  this->add_force(this->LJ_force(wall), MAX_FORCE);
+  this->add_force(this->WCA_force(wall), MAX_FORCE);
 }
 
 // Checkers
@@ -157,6 +163,20 @@ vec2 Particle::LJ_force(const Wall &wall) {
   double F = 0.1 * F_LJ(0.75, distance);
   return F * dir;
 }
+vec2 Particle::WCA_force(const Particle &p2) {
+  vec2 dir = this->connect(p2);
+  double distance = glm::length(dir);
+  dir = glm::normalize(dir);
+  double F = F_WCA(p2.get_radius(), distance, this->rad_eff);
+  return F * dir;
+}
+vec2 Particle::WCA_force(const Wall &wall) {
+  vec2 dir = this->look_at(closest_point_on_wall(wall));
+  double distance = glm::length(dir);
+  dir = glm::normalize(dir);
+  double F = F_WCA(wall.get_wca_dist(), distance, wall.get_wca_dist_eff());
+  return F * dir;
+}
 vec2 Particle::gravity_force(const Particle &p2) {
   vec2 dir = this->connect(p2);
   double distance2 = glm::length2(dir);
@@ -174,7 +194,7 @@ void Particle::add_force(const vec2 &F, double max = -1.0) {
 }
 void Particle::reset_force() { this->force = O_; }
 void Particle::interact_with_particle(const Particle &p2) {
-  this->add_force(this->LJ_force(p2), MAX_FORCE);
+  this->add_force(this->WCA_force(p2), MAX_FORCE);
 }
 
 // Velocity Verlet?..
