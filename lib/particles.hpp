@@ -4,6 +4,7 @@
 #include "maths.hpp"
 #include "wall.hpp"
 #include <SFML/Graphics.hpp> // this will be replaced with a dedicated SFML library
+#include "gradients.hpp"
 #include <set>
 #include <algorithm>
 
@@ -19,11 +20,12 @@ class Particle {
   std::set<Particle *> neighbors_x, neighbors_y, neighbors;
   sf::Color color;
   sf::CircleShape sphere_object;
+  Gradient *colors_gradient;
 
 public:
   Particle();
   Particle(const int &id, const vec2 &pos, const vec2 &vel, const double &mass,
-           const double &rad, const double &bounding_distance, const sf::Color &color);
+           const double &rad, const double &bounding_distance, const sf::Color &color, Gradient *colors_gradient);
   ~Particle();
 
   // Getters
@@ -93,6 +95,7 @@ public:
 
   // Graphics realted
   void update_shape();
+  void set_color_from_velocity();
 };
 
 struct CompareParticlesAABB {

@@ -47,17 +47,30 @@ int main(int argc, char *argv[]) {
     grid_points.push_back(vec2(col, row));
   }
 
+  // Colors
+  sf::Color start_color(sf::Color::Blue);
+  sf::Color end_color(sf::Color::Red);
+  Gradient color_system(start_color, end_color, 255, 0.0, 1000.0);
+  // sf::Color c0 = color_system.get_color(0.0);
+  // sf::Color c1 = color_system.get_color(5.0);
+  // sf::Color c2 = color_system.get_color(10.0);
+  // std::cout << (int)start_color.r << ", " << (int)start_color.g << ", " << (int)start_color.b << std::endl;
+  // std::cout << (int)end_color.r << ", " << (int)end_color.g << ", " << (int)end_color.b << std::endl;
+  // std::cout << (int)c0.r << ", " << (int)c0.g << ", " << (int)c0.b << std::endl;
+  // std::cout << (int)c1.r << ", " << (int)c1.g << ", " << (int)c1.b << std::endl;
+  // std::cout << (int)c2.r << ", " << (int)c2.g << ", " << (int)c2.b << std::endl;
+
   ParticleSystem particle_system(width, height);
   double x, y;
   for (int id = 0; id < num_particles; id++) {
     particle_system.add_particle(new Particle(
-        id, grid_points[id], O_, mass, rad, rad * 5.0, sf::Color::Green));
+        id, grid_points[id], O_, mass, rad, rad * 5.0, sf::Color::Green, &color_system));
   }
   Particle *p1 = particle_system.get_particle(0);
   Particle *p2 = particle_system.get_particle(1);
   p1->set_color(sf::Color::Blue);
   p2->set_color(sf::Color::White);
-  p1->set_vel(50.0, 15.0);
+  p1->set_vel(250.0, 115.0);
 
   // Add springs
   double L = glm::distance(p1->get_pos(), p2->get_pos());

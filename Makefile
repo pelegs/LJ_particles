@@ -10,6 +10,9 @@ maths:
 physics: maths
 	$(COMPILER) -c $(LIBFOLDER)/physics.cpp -o $(LIBFOLDER)/physics.o --std=$(STD)
 
+gradients:
+	$(COMPILER) -c $(LIBFOLDER)/gradients.cpp -o $(LIBFOLDER)/gradients.o --std=$(STD)
+
 otherfuncs:
 	$(COMPILER) -c $(LIBFOLDER)/otherfuncs.cpp -o $(LIBFOLDER)/otherfuncs.o --std=$(STD)
 
@@ -28,8 +31,8 @@ spring: particles
 main: physics otherfuncs particle_system spring
 	$(COMPILER) -c main.cpp --std=$(STD)
 
-all: physics otherfuncs particle_system spring main
-	$(COMPILER) main.o -o LJ_sim -lsfml-graphics -lsfml-window -lsfml-system $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LIBFOLDER)/otherfuncs.o $(LIBFOLDER)/particles.o $(LIBFOLDER)/wall.o $(LIBFOLDER)/particle_system.o $(LIBFOLDER)/spring.o $(LDFLAGS) --std=$(STD)
+all: physics gradients otherfuncs particle_system spring main
+	$(COMPILER) main.o -o LJ_sim -lsfml-graphics -lsfml-window -lsfml-system $(LIBFOLDER)/maths.o $(LIBFOLDER)/physics.o $(LIBFOLDER)/gradients.o $(LIBFOLDER)/otherfuncs.o $(LIBFOLDER)/particles.o $(LIBFOLDER)/wall.o $(LIBFOLDER)/particle_system.o $(LIBFOLDER)/spring.o $(LDFLAGS) --std=$(STD)
 
 debug:
 	$(COMPILER) $(MAIN).cpp -o $(MAIN) $(LDFLAGS) --std=$(STD) -g

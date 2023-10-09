@@ -30,7 +30,7 @@ Particle::Particle() {
 
 Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
                    const double &mass, const double &rad,
-                   const double &bounding_distance, const sf::Color &color) {
+                   const double &bounding_distance, const sf::Color &color, Gradient *colors_gradient) {
   this->id = id;
   this->pos = pos;
   this->vel = vel;
@@ -44,7 +44,8 @@ Particle::Particle(const int &id, const vec2 &pos, const vec2 &vel,
 
   // Graphics
   this->color = color;
-  this->sphere_object = sf::CircleShape(this->rad*0.75);
+  this->colors_gradient = colors_gradient;
+  this->sphere_object = sf::CircleShape(this->rad * 0.75);
   this->sphere_object.setFillColor(this->color);
 }
 
@@ -88,12 +89,13 @@ void Particle::set_pos(const double &x, const double &y) {
 void Particle::set_vel(const double &vx, const double &vy) {
   vec2 vel = {vx, vy};
   this->vel = vel;
+  this->set_color_from_velocity();
 }
 void Particle::set_mass(const double &m) {
   this->mass = m;
   this->mass_inv = 1.0 / m;
 }
-void Particle::set_radius(const double &r) { 
+void Particle::set_radius(const double &r) {
   this->rad = r;
   this->rad_eff = r * POW_2_1_6;
 }
@@ -210,6 +212,7 @@ void Particle::calc_acc() {
 }
 void Particle::calc_new_vel(const double &dt) {
   vel += 0.5 * (this->acc_prev + this->acc) * dt;
+  this->set_color_from_velocity();
 }
 
 // Neighbors related
@@ -250,7 +253,13 @@ void Particle::update_shape() {
   double x = this->pos[X_AX];
   double y = this->pos[Y_AX];
   double r = this->rad;
-  this->sphere_object.setPosition(x-rad, y-rad);
+  this->sphere_object.setPosition(x - rad, y - rad);
+}
+
+void Particle::set_color_from_velocity() {
+  double vel = glm::length(this->vel);
+  this->color = this->colors_gradient->get_color(vel);
+  this->sphere_object.setFillColor(this->color);
 }
 
 // --------------------------------------------- //
